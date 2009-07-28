@@ -1,0 +1,42 @@
+%h1 Submit a link to Reddis
+
+- errors_on @post do |error|
+  - error.on [:name, :not_present], "The field “Title” is mandatory."
+  - error.on [:location, :not_present], "The field “URL” is mandatory."
+  - error.on [:author, :not_numeric], "We couldn't find a user with the information provided."
+
+%form{:action => "/posts", :method => "post"}
+  %p
+    %label{:for => "post_location"} URL
+    %span.example eg: "http://monkrb.com"
+    %br
+    %input{:name => "post[location]", :id => "post_location", :value => @post.location}
+
+  %p
+    %label{:for => "post_name"} Title
+    %span.example eg: "New version of Monk released"
+    %br
+    %input{:name => "post[name]", :id => "post_name", :value => @post.name}
+
+  - unless logged_in?
+    %fieldset
+      %legend Have we met?
+
+      %p
+        %input{:type => "radio", :name => "session[existing]", :id => "session_existing_yes", :value => 1, :checked => true}
+        %label{:for => "session_existing_yes"} I'm already registered
+
+        %input{:type => "radio", :name => "session[existing]", :id => "session_existing_no", :value => 0}
+        %label{:for => "session_existing_no"} I'm new here
+
+      %p
+        %label{:for => "session_username"} Your username
+        %input{:type => "text", :name => "session[username]", :id => "session_username"}
+
+      %p
+        %label{:for => "session_password"} Your password
+        %input{:type => "text", :name => "session[password]", :id => "session_password"}
+
+  %p
+    %button{:type => "submit"}
+      Submit link

@@ -1,0 +1,25 @@
+!!! Strict
+%html
+  %head
+    %title
+    %meta{:"http-equiv" => "Content-Type", :content => "text/html; charset=utf-8"}/
+    %link{:rel => "stylesheet", :href => "/css/reset.css", :type => "text/css"}/
+    %link{:rel => "stylesheet", :href => "/css/main.css", :type => "text/css"}/
+  %body
+    #header
+      #navigation
+        - if logged_in?
+          Logged in as
+          %a{:href => "/users/#{current_user}"}= current_user
+          %a{:href => "/logout"} Logout
+        - else
+          %a{:href => "/signup"} Sign up
+          %a{:href => "/login"} Start session
+
+      #brand
+        %p
+          %a{:href => "/", :title => "Home"} The Sample Monk Application
+
+    #content
+
+      != yield

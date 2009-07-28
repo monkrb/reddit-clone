@@ -1,0 +1,18 @@
+%h1&= @post
+
+%p<
+  where:
+  %a(href="#{@post.location}") #{@post.location}
+
+%p
+  = "when: #{@post.date}"
+
+%p
+  = "author: #{User[@post.author]}"
+
+%p
+  #votes
+    = "votes: #{@post.votes}"
+
+  %form{:action => "/posts/#{@post.id}", :method => "post"}
+    %button{:type => "submit", :class => @voted ? "up-selected" : "up"}

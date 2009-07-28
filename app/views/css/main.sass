@@ -1,0 +1,192 @@
+!width = 960px
+
+body
+  :background-color whitesmoke
+  :font-family "Lucida Grande", sans-serif
+  :font-size 0.8em
+  :color #333
+
+=clearfix
+  *display:     inline-block
+  &:after
+    content:    " "
+    display:    block
+    height:     0
+    clear:      both
+    visibility: hidden
+
+.clear
+  :clear both
+  :width 100%
+  :font-size 0px
+
+= title
+  :font-family "Helvetica", sans-serif
+  :font-size 18px
+  :font-weight bold
+
+h1
+  :font-size 2em
+  :line-height 2.4em
+
+h2
+  :font-size 1.4em
+  :line-height 2em
+
+a
+  :color #069
+  :text-decoration none
+
+  &:hover
+    :text-decoration underline
+
+form
+  > p
+    label
+      +title
+
+    input, button
+      :font-size 2em
+      :margin 5px 0 0 0
+
+  p
+    :margin 10px 0
+
+  fieldset
+    :border-width 0
+    :padding 0
+    :margin 20px 0
+
+    legend
+      +title
+
+  span.example
+    :color #777
+
+  #post_date
+    :width 190px
+
+  button.up
+    :background url(/images/up.gif)
+    :border 0
+    :height 15px
+    :width 14px
+
+  button.up-selected
+    :background url(/images/up-selected.gif)
+    :border 0
+    :height 15px
+    :width 14px
+
+#header
+  :padding 15px
+  :height 120px
+
+#navigation
+  :text-align right
+  :width = !width
+  :margin auto
+
+#brand
+  :width = !width
+  :margin auto
+  :margin-bottom 1em
+  :margin-top 4em
+
+  p
+    :font-size 3.4em
+    :font-weight bold
+  a
+    :text-decoration none
+    :color black
+    :letter-spacing -2px
+    :font-family "Trebuchet MS"
+
+#content
+  :width = !width
+  :margin auto
+  :padding 40px
+  :-webkit-border-radius 1em
+  :-moz-border-radius 1em
+
+#grid
+  +clearfix
+  :margin 15px 0
+  :position relative
+
+  a:visited
+    :color #7a9bac
+
+  .day
+    :margin 0 30px 0 0
+    :float left
+    :width = (!width - 60px)/ 3
+    :font-size 11px
+
+    &.just_added
+      :margin-right 0
+
+    p
+      :margin 10px 5px
+      :color #666
+
+    h2
+      +title
+      :padding 0 3px
+      :border-bottom 1px solid #ccc
+
+    td
+      :padding 4px
+
+    li
+      +clearfix
+      :clear both
+      :padding 5px 5px 4px 5px
+      :border-bottom 1px solid #ccc
+      :line-height 17px
+
+      &:last-child
+        :border-bottom-width 0
+
+    .votes
+      +title
+      :display block
+      :float right
+      :color #999
+      :font-size 14px
+      :line-height 14px
+      :padding 3px 0 0px 0
+
+    form
+      :margin 0 5px 0 0
+      :display inline
+      :vertical-align middle
+      :line-height 12px
+
+      button
+        :border-width 0
+        :background-color transparent
+        :padding 0
+        :margin 0
+        :font-size 12px
+        :cursor pointer
+        :color #CCC
+
+        &.voted
+          :color crimson
+
+  .next, .prev
+    :text-decoration none
+    :font-size 18px
+    :color #666
+
+
+  table
+    :table-layout fixed
+    :width 100%
+
+    tr
+      :border-bottom 1px solid #dadada
+
+    td
+      :vertical-align middle

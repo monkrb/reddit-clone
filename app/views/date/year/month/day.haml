@@ -1,0 +1,10 @@
+%h1 Hello
+
+%a{:href => "/signup"} Sign up
+%a{:href => "/login"} Log in
+%a{:href => "/posts/new"} Post a link
+
+%h2= @date
+
+- @posts.each do |post|
+  = post.name

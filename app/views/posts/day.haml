@@ -1,0 +1,14 @@
+.day{:class => date.downcase.gsub(" ", "_")}
+  %h2= date
+
+  - if posts.any?
+    %ul
+      - posts.each do |post|
+        %li
+          %span.votes= post.votes
+          - if logged_in?
+            != vote_post(post)
+          != link_to_post post
+  - else
+    %p
+      Seems like nothing interesting happened this day...

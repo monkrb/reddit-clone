@@ -1,0 +1,10 @@
+%h1= @user.username
+
+- if @posts.any?
+  %h2 Posts
+
+  %table
+    - @posts.each do |post|
+      %tr
+        %td!= link_to_post post
+

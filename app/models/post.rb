@@ -1,0 +1,57 @@
+class Post < Ohm::Model
+  extend Spawn
+  include Comparable
+
+  attribute :name
+  attribute :location
+  attribute :datetime
+  attribute :author
+
+  counter :votes
+
+  index :date
+  index :author
+
+  def validate
+    assert_present :name
+    assert_present :location
+    assert_numeric :author
+  end
+
+  def create
+    self.datetime ||= Time.now.strftime("%Y-%m-%d %H:%M:%S")
+    super
+  end
+
+  def to_s
+    name.to_s
+  end
+
+  def to_param
+    name
+  end
+
+  def <=> other
+    other.votes == votes ?
+      name <=> other.name :
+      other.votes <=> votes
+  end
+
+  def self.top_for(date, limit = 10)
+    find(:date, date).sort_by(:votes, :order => "DESC", :limit => limit)
+  end
+
+  def self.just_added(limit = 10)
+    find(:date, format_date(Date.today)).sort_by(:datetime, :order => "ALPHA DESC", :limit => limit)
+  end
+
+  def date
+    format_date(Time.parse(datetime).send(:to_date))
+  end
+end
+
+Post.spawner do |post|
+  post.name = Faker::Company.catch_phrase
+  post.location = "http://#{Faker::Internet.domain_name}"
+  post.author ||= User.spawn.id
+end
