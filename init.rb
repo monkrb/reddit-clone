@@ -20,13 +20,10 @@ class Main < Monk::Glue
   set :app_file, __FILE__
 
   use Rack::Session::Cookie
-
-  before do
-
-    # Connect to redis database.
-    Ohm.connect(settings(:redis))
-  end
 end
+
+# Connect to redis database.
+Ohm.connect(settings(:redis))
 
 # Load all application files.
 Dir[root_path("app/**/*.rb")].each do |file|
