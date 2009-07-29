@@ -37,12 +37,8 @@ class Post < Ohm::Model
       other.votes <=> votes
   end
 
-  def self.top_for(date, limit = 10)
-    find(:date, date).sort_by(:votes, :order => "DESC", :limit => limit)
-  end
-
-  def self.just_added(limit = 10)
-    find(:date, format_date(Date.today)).sort_by(:datetime, :order => "ALPHA DESC", :limit => limit)
+  def self.by_date(date)
+    find(:date, format_date(date))
   end
 
   def date

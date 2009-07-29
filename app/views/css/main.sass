@@ -28,6 +28,7 @@ body
 h1
   :font-size 2em
   :line-height 2.4em
+  :letter-spacing -1px
 
 h2
   :font-size 1.4em
@@ -87,6 +88,24 @@ form
   :width = !width
   :margin auto
 
+  ul
+    :font-size 11px
+
+    li
+      :display inline
+      :padding 5px 0.3em 5px 0.5em
+      :border-right 1px solid #CCCCCC
+      :padding-top 0px
+
+      &:first-child
+        :padding-left 0
+
+      &:last-child
+        :border-right 0
+
+      a
+        :text-decoration none
+
 #brand
   :width = !width
   :margin auto
@@ -100,12 +119,12 @@ form
     :text-decoration none
     :color black
     :letter-spacing -2px
-    :font-family "Trebuchet MS"
+    :font-family "Trebuchet MS", "Lucida Grande", sans-serif
 
 #content
   :width = !width
   :margin auto
-  :padding 40px
+  :padding 0 40px
   :-webkit-border-radius 1em
   :-moz-border-radius 1em
 
@@ -117,7 +136,7 @@ form
   a:visited
     :color #7a9bac
 
-  .day
+  .list
     :margin 0 30px 0 0
     :float left
     :width = (!width - 60px)/ 3

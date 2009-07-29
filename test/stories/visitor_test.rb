@@ -14,7 +14,7 @@ class VisitorTest < Test::Unit::TestCase
     fill_in "Your username", :with => username
     fill_in "Your password", :with => password
 
-    click_button "Start session"
+    click_button "Login"
   end
 
   story "As a visitor I want to create an account so that I can access restricted features." do
@@ -56,16 +56,16 @@ class VisitorTest < Test::Unit::TestCase
     scenario "A visitor logs in successfully" do
       visit "/"
 
-      click_link "Start session"
+      click_link "Login"
 
       fill_in "Your username", :with => "albert"
       fill_in "Your password", :with => "monkey"
 
-      click_button "Start session"
+      click_button "Login"
 
       assert_contain "Logged in as"
       assert_contain "albert"
-      assert_not_contain "Start session"
+      assert_not_contain "Login"
 
       click_link "Logout"
       assert_not_contain "Hello albert"
@@ -74,12 +74,12 @@ class VisitorTest < Test::Unit::TestCase
     scenario "A visitor supplies the wrong credentials" do
       visit "/"
 
-      click_link "Start session"
+      click_link "Login"
 
       fill_in "Your username", :with => "simon"
       fill_in "Your password", :with => "wronglet"
 
-      click_button "Start session"
+      click_button "Login"
 
       assert_contain "We are sorry: the information supplied is not valid."
     end
@@ -190,7 +190,7 @@ class VisitorTest < Test::Unit::TestCase
       visit "/"
       click_link "Monk News"
 
-      assert_contain "author: matilda"
+      assert_contain "matilda"
     end
   end
 
@@ -208,7 +208,7 @@ class VisitorTest < Test::Unit::TestCase
 
       visit "/posts/#{@post.id}"
 
-      assert_contain "when: 10/07/2009"
+      assert_contain "10/07/2009"
     end
   end
 
@@ -225,7 +225,7 @@ class VisitorTest < Test::Unit::TestCase
 
       visit "/posts/#{@post.id}"
 
-      assert_have_selector "h1", :content => "Ruby Tuesday"
+      assert_have_selector "h2", :content => "Ruby Tuesday"
       assert_have_xpath "//a[@href='http://ruby-lang.org']"
     end
   end
@@ -277,9 +277,8 @@ class VisitorTest < Test::Unit::TestCase
     end
 
     scenario "A user visits a given date" do
-      visit "/date/2009/06/28"
+      visit "?date=2009-06-28"
 
-      assert_contain @date
       assert_contain @post.name
     end
   end
@@ -308,10 +307,10 @@ class VisitorTest < Test::Unit::TestCase
       visit "/posts/#{@post.id}"
 
       report "Vote for the post" do
-        click_button ""
+        click_button "♥"
       end
 
-      assert_contain "votes: 1"
+      assert_have_selector "span.votes", :content => "1"
     end
 
     scenario "A user cannot vote more than once" do
@@ -320,10 +319,10 @@ class VisitorTest < Test::Unit::TestCase
       visit "/posts/#{@post.id}"
 
       report "Vote for the post" do
-        click_button ""
+        click_button "♥"
       end
 
-      assert_contain "votes: 1"
+      assert_have_selector "span.votes", :content => "1"
     end
   end
 
@@ -338,7 +337,7 @@ class VisitorTest < Test::Unit::TestCase
     scenario "A user visits a post that has received some votes" do
       visit "/posts/#{@post.id}"
 
-      assert_contain "votes: 3"
+      assert_have_selector "span.votes", :content => "3"
     end
   end
 
@@ -354,18 +353,18 @@ class VisitorTest < Test::Unit::TestCase
       visit "/posts/#{@post.id}"
 
       report "Vote for the post" do
-        click_button ""
+        click_button "♥"
       end
 
-      assert_have_xpath("//button[@class='up-selected']")
-      assert_contain "votes: 1"
+      assert_have_xpath("//button[@class='voted']")
+      assert_have_selector "span.votes", :content => "1"
 
       report "Vote for the post" do
-        click_button ""
+        click_button "♥"
       end
 
-      assert_have_xpath("//button[@class='up']")
-      assert_contain "votes: 0"
+      assert_have_xpath("//button[@class='']")
+      assert_have_selector "span.votes", :content => "0"
     end
   end
 

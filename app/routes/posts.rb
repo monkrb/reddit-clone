@@ -6,7 +6,8 @@ class Main
 
   get "/posts/:id" do
     @post = Post[params[:id]]
-    @voted = current_user.voted_for?(@post) if logged_in?
+    @author = User[@post.author]
+    @url = @post.location
     haml :"posts/id"
   end
 
@@ -65,8 +66,16 @@ class Main
       end
     end
 
-    def day(date, posts)
-      partial(:"posts/day", :date => date, :posts => posts)
+    def list(title, posts, message = "Nothing interesting here.")
+      partial(:"posts/list", :title => title, :posts => posts, :message => message)
+    end
+
+    def top(posts)
+      posts.sort_by(:votes, :limit => 10, :order => "DESC")
+    end
+
+    def recent(posts)
+      posts.sort_by(:datetime, :order => "ALPHA DESC", :limit => 10)
     end
 
     def vote_post(post)

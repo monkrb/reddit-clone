@@ -1,10 +1,17 @@
-%h1= @user.username
+#grid
 
-- if @posts.any?
-  %h2 Posts
+  != list("Recently posted by #{@user}", @posts_authored)
+  != list("Recently voted by #{@user}",  @posts_voted)
 
-  %table
-    - @posts.each do |post|
-      %tr
-        %td!= link_to_post post
-
+  .list.just_added
+    %h2 Profile information
+    %ul
+      %li
+        %span.votes= @posts_authored.size
+        Posts submitted
+      %li
+        %span.votes= @posts_voted.size
+        Votes issued
+      %li
+        %span.votes= @user.votes_received
+        Votes received

@@ -9,7 +9,7 @@ class User < Ohm::Model
   attribute :username
   attribute :password
   attribute :salt
-  set :votes
+  set :votes, Post
 
   index :username
 
@@ -39,11 +39,12 @@ class User < Ohm::Model
     super
   end
 
-  def posts
-    authored = Post.key(:author, Post.encode(id))
-    Ohm.redis.sunion(key(:votes), authored).collect do |post_id|
-      Post.new(:id => post_id)
-    end
+  def posts_authored
+    Post.find(:author, id)
+  end
+
+  def votes_received
+    posts_authored.inject(0) { |t, p| t + p.votes.to_i }
   end
 
   def vote_for(post)

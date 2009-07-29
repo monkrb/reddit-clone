@@ -1,17 +1,11 @@
 - if session[:notice]
   = session.delete(:notice)
 
-%h2
-  %a{:href => "/posts/new"} Submit a link
-
 #grid
 
-  != day(friendly_date(@date - 1), @yesterday)
-  != day(friendly_date(@date),     @today)
+  != list(friendly_date(@date - 1), @yesterday)
+  != list(friendly_date(@date),     @today)
+  != list("Just added",             @just_added)
 
-
-  != day("Just added",             @just_added)
-
-%a{:href => "/?date=#{@date - 1}", :title => "Previous", :class => "prev"} &larr;
-%a{:href => "/?date=#{@date + 1}", :title => "Next", :class => "next"} &rarr;
-
+%a(href="/?date=#{@date - 1}" title="Previous" class="prev") &larr;
+%a(href="/?date=#{@date + 1}" title="Next" class="next") &rarr;

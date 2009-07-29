@@ -5,12 +5,12 @@
   - error.on [[:username], :not_unique], "There's already a username #{@user.username}."
 
 #signup_form
-  %form{:action => "/signup", :method => "post"}
+  %form(action="/signup" method="post")
     %p
-      %label{:for => "user_username"} Your username
-      %input{:type => "text", :name => "user[username]", :id => "user_username", :value => @user.username}/
+      %label(for="user_username") Your username
+      %input(type="text" name="user[username]" id="user_username" value="#{@user.username}")/
     %p
-      %label{:for => "user_password"} Your password
-      %input{:type => "password", :name => "user[password]", :id => "user_password"}/
+      %label(for="user_password") Your password
+      %input(type="password" name="user[password]" id="user_password")/
     %p
-      %input{:type => "submit", :value => "Sign up"}/
+      %input(type="submit" value="Sign up")/

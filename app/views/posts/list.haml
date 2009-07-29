@@ -1,5 +1,5 @@
-.day{:class => date.downcase.gsub(" ", "_")}
-  %h2= date
+.list{:class => title.downcase.gsub(" ", "_")}
+  %h2= title
 
   - if posts.any?
     %ul
@@ -11,4 +11,4 @@
           != link_to_post post
   - else
     %p
-      Seems like nothing interesting happened this day...
+      = message

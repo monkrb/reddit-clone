@@ -2,23 +2,38 @@
 %html
   %head
     %title
-    %meta{:"http-equiv" => "Content-Type", :content => "text/html; charset=utf-8"}/
-    %link{:rel => "stylesheet", :href => "/css/reset.css", :type => "text/css"}/
-    %link{:rel => "stylesheet", :href => "/css/main.css", :type => "text/css"}/
+    %meta(http-equiv="Content-Type" content="text/html; charset=utf-8")/
+    %link(rel="stylesheet" href="/css/reset.css" type="text/css")/
+    %link(rel="stylesheet" href="/css/main.css" type="text/css")/
   %body
     #header
       #navigation
-        - if logged_in?
-          Logged in as
-          %a{:href => "/users/#{current_user}"}= current_user
-          %a{:href => "/logout"} Logout
-        - else
-          %a{:href => "/signup"} Sign up
-          %a{:href => "/login"} Start session
+
+        %ul
+          - if logged_in?
+            %li
+              Logged in as #{current_user}
+            %li
+              %a(href="/") Home
+            %li
+              %a(href="/users/#{current_user}") Profile
+            %li
+              %a(href="/posts/new") Submit a link
+            %li
+              %a(href="/logout") Logout
+          - else
+            %li
+              %a(href="/") Home
+            %li
+              %a(href="/posts/new") Submit a link
+            %li
+              %a(href="/signup") Sign up
+            %li
+              %a(href="/login") Login
 
       #brand
         %p
-          %a{:href => "/", :title => "Home"} The Sample Monk Application
+          %a(href="/" title="Home") The Sample Monk Application
 
     #content
 
