@@ -33,6 +33,21 @@ class Monk < Thor
     copy_example(example) unless File.exists?(target_file_for(example))
   end
 
+  desc "seed", "Seeds the database with random data"
+  def seed
+    init
+
+    Ohm.flush
+
+    100.times do
+      Post.spawn(:datetime => (Time.now - rand(24) * 60 * 60).strftime("%Y-%m-%d %H:%M:%S"))
+    end
+  end
+
+  def init
+    require "init"
+  end
+
 private
 
 
