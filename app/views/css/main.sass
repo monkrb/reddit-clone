@@ -25,6 +25,12 @@ body
   :font-size 18px
   :font-weight bold
 
+= hover
+  :text-decoration none
+
+  &:hover
+    :text-decoration underline
+
 h1
   :font-size 2em
   :line-height 2.4em
@@ -35,11 +41,8 @@ h2
   :line-height 2em
 
 a
+  +hover
   :color #069
-  :text-decoration none
-
-  &:hover
-    :text-decoration underline
 
 form
   > p
@@ -90,21 +93,18 @@ form
 
   ul
     :font-size 11px
+    :float right
 
     li
-      :display inline
-      :padding 5px 0.3em 5px 0.5em
+      :float left
+      :padding 2px 5px 3px 5px
       :border-right 1px solid #CCCCCC
-      :padding-top 0px
 
       &:first-child
         :padding-left 0
 
       &:last-child
         :border-right 0
-
-      a
-        :text-decoration none
 
 #brand
   :width = !width
@@ -173,8 +173,8 @@ form
       :float right
       :color #999
       :font-size 14px
-      :line-height 14px
-      :padding 3px 0 0px 0
+      :line-height 16px
+      :padding 1px 0 0 0
 
     form
       :margin 0 5px 0 0
@@ -198,7 +198,6 @@ form
     :text-decoration none
     :font-size 18px
     :color #666
-
 
   table
     :table-layout fixed
