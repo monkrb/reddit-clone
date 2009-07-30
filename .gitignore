@@ -1,3 +1,4 @@
+/config/deploy_private.rb
 /config/settings.yml
 /config/redis/development.conf
 /config/redis/test.conf
