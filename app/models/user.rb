@@ -25,18 +25,20 @@ class User < Ohm::Model
     user
   end
 
+  def password=(value)
+    write_local(:salt, encrypt(Time.now.to_s, ""))
+
+    value = value.empty? ? nil : encrypt(value, salt)
+
+    write_local(:password, value)
+  end
+
   def to_s
     username.to_s
   end
 
   def to_param
     username
-  end
-
-  def create
-    self.salt ||= encrypt(Time.now.to_s, username)
-    self.password = encrypt(password, salt)
-    super
   end
 
   def posts_authored
