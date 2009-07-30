@@ -44,6 +44,11 @@ class Post < Ohm::Model
   def date
     format_date(Time.parse(datetime).send(:to_date))
   end
+
+  def location=(value)
+    value = "http://#{value}" unless value.empty? || value =~ %r{^http://}
+    write_local(:location, value)
+  end
 end
 
 Post.spawner do |post|
