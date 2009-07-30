@@ -33,6 +33,6 @@ namespace :deploy do
 
   desc "Generate static CSS"
   task :sass, :roles => :app do
-    run "cd #{release_path}; ./vendor/thor/bin/thor monk:sass"
+    run "cd #{release_path} && env RACK_ENV=#{fetch :rack_env} ./vendor/thor/bin/thor monk:sass"
   end
 end
