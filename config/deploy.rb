@@ -1,5 +1,6 @@
 # after "deploy:update_code", "deploy:set_permissions"
 after "deploy:update_code", "deploy:symlink_configs"
+after "deploy:update_code", "deploy:sass"
 
 namespace :deploy do
   desc "Start the app"
@@ -28,5 +29,10 @@ namespace :deploy do
     %w(settings).each do |filename|
       run "ln -nfs #{shared_path}/config/#{filename}.yml #{release_path}/config/#{filename}.yml"
     end
+  end
+
+  desc "Generate static CSS"
+  task :sass, :roles => :app do
+    run "cd #{release_path}; ./vendor/thor/bin/thor monk:sass"
   end
 end

@@ -44,12 +44,25 @@ class Monk < Thor
     end
   end
 
-  def init
-    require "init"
+  desc "sass", "Compile all Sass files into CSS"
+  def sass
+    init
+
+    require "sass/plugin"
+
+    Sass::Plugin.options.merge! \
+      :template_location => root_path("app", "views", "css"),
+      :css_location      => File.join(Main.public, "css"),
+      :cache             => false
+
+    Sass::Plugin.update_stylesheets
   end
 
 private
 
+  def init
+    require "init"
+  end
 
   def self.source_root
     File.dirname(__FILE__)
