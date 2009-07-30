@@ -1,7 +1,8 @@
 %h1 Log in
 
 - if session[:error]
-  = session.delete(:error)
+  .errors
+    = session.delete(:error)
 
 %form(action="/login" method="post")
   %p

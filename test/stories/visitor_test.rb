@@ -23,8 +23,8 @@ class VisitorTest < Test::Unit::TestCase
 
       click_link "Sign up"
 
-      fill_in "Your username", :with => "albert"
-      fill_in "Your password", :with => "monkey"
+      fill_in "Choose a username", :with => "albert"
+      fill_in "And a password", :with => "monkey"
 
       click_button "Sign up"
 
@@ -39,12 +39,25 @@ class VisitorTest < Test::Unit::TestCase
 
       click_link "Sign up"
 
-      fill_in "Your username", :with => "albert"
-      fill_in "Your password", :with => "monkey"
+      fill_in "Choose a username", :with => "albert"
+      fill_in "And a password", :with => "monkey"
 
       click_button "Sign up"
 
-      assert_contain "There's already a username albert."
+      assert_contain "Someone else owns the username “albert”."
+    end
+
+    scenario "A visitor tries to sign up without a password" do
+      visit "/"
+
+      click_link "Sign up"
+
+      fill_in "Choose a username", :with => "albert"
+      fill_in "And a password", :with => ""
+
+      click_button "Sign up"
+
+      assert_contain "We won't be able to authenticate you if you don't provide a password."
     end
   end
 
