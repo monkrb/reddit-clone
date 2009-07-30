@@ -1,14 +1,20 @@
-#grid
-  .list
-    %h2= @post
-    %ul
-      %li
-        Submitted by
-        %a(href="/users/#{@author}") #{@author}
-        on
-        %a(href="/?date=#{@post.date}") #{@post.date}
-      %li
-        %span.votes= @post.votes
-        - if logged_in?
-          != vote_post(@post)
-        %a(href=@url title=@url) #{@url[0, 35]}...
+- @title = @post
+
+#post
+  - if logged_in?
+    != vote_post(@post)
+
+  %h1= @post
+
+  %p.url
+    %a(href=@url title=@url)= @url
+
+  %p
+    Submitted by
+    %a(href="/users/#{@author}") #{@author}
+    on
+    %a(href="/?date=#{@post.date}") #{@post.date}
+
+  %p
+    %span.votes= @post.votes
+    votes

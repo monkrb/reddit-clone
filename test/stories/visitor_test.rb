@@ -259,7 +259,7 @@ class VisitorTest < Test::Unit::TestCase
 
       visit "/posts/#{@post.id}"
 
-      assert_have_selector "h2", :content => "Ruby Tuesday"
+      assert_have_selector "h1", :content => "Ruby Tuesday"
       assert_have_xpath "//a[@href='http://ruby-lang.org']"
     end
   end

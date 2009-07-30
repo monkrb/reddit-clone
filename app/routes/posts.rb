@@ -81,7 +81,7 @@ class Main
     def vote_post(post)
       voted = current_user.voted_for?(post) if logged_in?
       capture_haml do
-        haml_tag(:form, :action => "/posts/#{post.id}", :method => "post") do
+        haml_tag(:form, :action => "/posts/#{post.id}", :method => "post", :class => "vote") do
           haml_tag(:button, "♥", :type => "submit", :class => voted ? "voted" : "")
         end
       end

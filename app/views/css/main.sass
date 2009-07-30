@@ -31,10 +31,12 @@ body
   &:hover
     :text-decoration underline
 
+= border
+  :border-bottom 1px solid #ccc
+
 h1
   :font-size 2em
   :line-height 2.4em
-  :letter-spacing -1px
 
 h2
   :font-size 1.4em
@@ -166,17 +168,17 @@ form
 
     h2
       +title
+      +border
       :padding 0 3px
-      :border-bottom 1px solid #ccc
 
     td
       :padding 4px
 
     li
       +clearfix
+      +border
       :clear both
       :padding 5px 5px 4px 5px
-      :border-bottom 1px solid #ccc
       :line-height 17px
 
       &:last-child
@@ -190,24 +192,6 @@ form
       :font-size 14px
       :line-height 16px
       :padding 1px 0 0 0
-
-    form
-      :margin 0 5px 0 0
-      :display inline
-      :vertical-align middle
-      :line-height 12px
-
-      button
-        :border-width 0
-        :background-color transparent
-        :padding 0
-        :margin 0
-        :font-size 12px
-        :cursor pointer
-        :color #CCC
-
-        &.voted
-          :color crimson
 
   .next, .prev
     :text-decoration none
@@ -223,3 +207,44 @@ form
 
     td
       :vertical-align middle
+
+form.vote
+  :margin 0 5px 0 0
+  :display inline
+  :vertical-align middle
+  :line-height 12px
+
+  button
+    :border-width 0
+    :background-color transparent
+    :padding 0
+    :margin 0
+    :font-size 12px
+    :cursor pointer
+    :color #CCC
+
+    &.voted
+      :color crimson
+
+#post
+  :position relative
+
+  h1
+    +title
+    :font-size 26px
+    :line-height 26px
+    :margin 0 0 3px 0
+
+  form.vote
+    :font-size 30px
+    :position absolute
+    :left -20px
+
+  p
+    :padding 5px 0 4px 0
+    :font-size 11px
+
+    &.url
+      +border
+      :padding-bottom 10px
+      :margin-bottom 3px
