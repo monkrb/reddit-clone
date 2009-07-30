@@ -47,6 +47,27 @@ class VisitorTest < Test::Unit::TestCase
       assert_contain "Someone else owns the username “albert”."
     end
 
+    scenario "A visitor forgot that she's already registered" do
+      User.spawn(:username => "maria")
+
+      visit "/"
+
+      click_link "Sign up"
+
+      fill_in "Choose a username", :with => "maria"
+      fill_in "And a password", :with => "monkey"
+
+      click_button "Sign up"
+
+      assert_contain "Someone else owns the username “maria”."
+      click_link "Maybe it's you?"
+
+      fill_in "Your password", :with => "monkey"
+      click_button "Login"
+      assert_contain "Logged in as"
+      assert_contain "maria"
+    end
+
     scenario "A visitor tries to sign up without a password" do
       visit "/"
 
