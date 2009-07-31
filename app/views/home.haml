@@ -9,3 +9,23 @@
 
 %a(href="/?date=#{@date - 1}" title="Previous" class="prev") &larr;
 %a(href="/?date=#{@date + 1}" title="Next" class="next") &rarr;
+
+
+#footer
+  %p
+    This is a sample application created with
+    != succeed "." do
+      %a(href="http://monkrb.com") Monk
+
+    - # It uses a key-value store,
+    - # != succeed "," do
+    - #   %a(href="http://code.google.com/p/redis") Redis
+    - # to store things.
+    Feel free to
+    %a(href="http://github.com/monkrb/reddit-clone") grab the source code
+    and play with it.
+
+  %p.sponsor
+    This is an open source project sponsored by
+    %a(href="http://citrusbyte.com")
+      %img(src="/images/cb.png" alt="Citrusbyte")

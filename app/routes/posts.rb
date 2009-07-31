@@ -71,11 +71,11 @@ class Main
     end
 
     def top(posts)
-      posts.sort_by(:votes, :limit => 10, :order => "DESC")
+      posts.sort_by(:votes, :limit => 15, :order => "DESC")
     end
 
     def recent(posts)
-      posts.sort_by(:datetime, :order => "ALPHA DESC", :limit => 10)
+      posts.sort_by(:datetime, :order => "ALPHA DESC", :limit => 15)
     end
 
     def vote_post(post)
