@@ -37,7 +37,7 @@ class Main
   module Helpers
     def link_to_post(post)
       capture_haml do
-        haml_tag(:a, post, :href => "/posts/#{post.id}")
+        haml_tag(:a, post, :href => "/posts/#{post.id}", :title => post)
       end
     end
 

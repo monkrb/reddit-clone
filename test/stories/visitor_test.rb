@@ -130,7 +130,7 @@ class VisitorTest < Test::Unit::TestCase
       click_link "Submit a link"
 
       fill_in "URL", :with => "Monk, the glue framework"
-      fill_in "Title", :with => "http://monkrb.com"
+      fill_in "Describe it", :with => "http://monkrb.com"
 
       click_button "Submit link"
 
@@ -152,7 +152,7 @@ class VisitorTest < Test::Unit::TestCase
 
       assert_contain "The field “Title” is mandatory"
 
-      fill_in "Title", :with => "http://lawebdev.com"
+      fill_in "Describe it", :with => "http://lawebdev.com"
       click_button "Submit link"
 
       assert_contain "Your link has been added"
@@ -164,7 +164,7 @@ class VisitorTest < Test::Unit::TestCase
       click_link "Submit a link"
 
       fill_in "URL", :with => "Fresh news"
-      fill_in "Title", :with => "http://reddit.com"
+      fill_in "Describe it", :with => "http://reddit.com"
 
       fill_in "Your username", :with => "albert"
       fill_in "Your password", :with => "monkey"
@@ -180,7 +180,7 @@ class VisitorTest < Test::Unit::TestCase
       click_link "Submit a link"
 
       fill_in "URL", :with => "Fresh news"
-      fill_in "Title", :with => "http://reddit.com"
+      fill_in "Describe it", :with => "http://reddit.com"
 
       fill_in "Your username", :with => "foo"
       fill_in "Your password", :with => "monkey"
@@ -197,7 +197,7 @@ class VisitorTest < Test::Unit::TestCase
       click_link "Submit a link"
 
       fill_in "URL", :with => "Fresh news"
-      fill_in "Title", :with => "http://reddit.com"
+      fill_in "Describe it", :with => "http://reddit.com"
 
       choose "I'm new here"
 

@@ -13,7 +13,7 @@ class Post < Ohm::Model
   index :author
 
   def validate
-    assert_present :name
+    assert_present(:name) and assert_length(:name, 0..50)
     assert_present :location
     assert_numeric :author
   end
@@ -48,6 +48,12 @@ class Post < Ohm::Model
   def location=(value)
     value = "http://#{value}" unless value.empty? || value =~ %r{^http://}
     write_local(:location, value)
+  end
+
+protected
+
+  def assert_length(att, length)
+    assert length === send(att).size, [att, :too_long]
   end
 end
 

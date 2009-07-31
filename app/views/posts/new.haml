@@ -13,10 +13,10 @@
     %input(name="post[location]" id="post_location" value="#{@post.location}")
 
   %p
-    %label(for="post_name") Title
-    %span.example eg: "New version of Monk released"
+    %label(for="post_name") Describe it
+    %span.example in 40 characters or less
     %br
-    %input(name="post[name]" id="post_name" value="#{@post.name}")
+    %input(name="post[name]" id="post_name" value="#{@post.name}" maxlength=40)
 
   - unless logged_in?
     %fieldset
