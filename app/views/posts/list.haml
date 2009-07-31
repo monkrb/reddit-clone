@@ -5,10 +5,10 @@
     %ul
       - posts.each do |post|
         %li
-          %span.votes= post.votes
           - if logged_in?
             != vote_post(post)
           != link_to_post post
+          %span.votes= post.votes
   - else
     %p
       = message
