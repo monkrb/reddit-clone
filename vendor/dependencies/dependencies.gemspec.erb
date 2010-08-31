@@ -1,0 +1,28 @@
+Gem::Specification.new do |s|
+  s.name              = "dependencies"
+  s.version           = "0.0.9"
+  s.summary           = "Specify your project's dependencies in one file."
+  s.authors           = ["Damian Janowski", "Michel Martens"]
+  s.email             = ["djanowski@dimaion.com", "michel@soveran.com"]
+
+  s.rubyforge_project = "dependencies"
+
+  s.executables << "dep"
+
+  s.files = <%= Dir[
+    "LICENSE",
+    "README.markdown",
+    "Rakefile",
+    "Thorfile",
+    "bin/*",
+    "*.gemspec",
+    "lib/**/*.rb",
+    "test/*.*",
+    "test/vendor/bar/**/*",
+    "test/vendor/bar-core-1.0/**/*",
+    "test/vendor/barz-2.0/**/*",
+    "test/vendor/baz-1.0/**/*"
+  ].inspect %>
+
+  s.add_dependency("thor", "~> 0.11")
+end

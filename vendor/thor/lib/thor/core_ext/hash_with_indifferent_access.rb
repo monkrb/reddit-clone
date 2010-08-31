@@ -1,5 +1,5 @@
 class Thor
-  module CoreExt
+  module CoreExt #:nodoc:
 
     # A hash with indifferent access and magic predicates.
     #
@@ -9,7 +9,7 @@ class Thor
     #   hash['foo'] #=> 'bar'
     #   hash.foo?   #=> true
     #
-    class HashWithIndifferentAccess < ::Hash
+    class HashWithIndifferentAccess < ::Hash #:nodoc:
 
       def initialize(hash={})
         super()
@@ -65,7 +65,7 @@ class Thor
             else
               self[$1] == args.first
             end
-          else 
+          else
             self[method]
           end
         end

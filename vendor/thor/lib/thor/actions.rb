@@ -1,4 +1,6 @@
 require 'fileutils'
+require 'uri'
+require 'thor/core_ext/file_binary_read'
 
 Dir[File.join(File.dirname(__FILE__), "actions", "*.rb")].each do |action|
   require action
@@ -8,23 +10,8 @@ class Thor
   module Actions
     attr_accessor :behavior
 
-    # On inclusion, add some options to base.
-    #
     def self.included(base) #:nodoc:
       base.extend ClassMethods
-      return unless base.respond_to?(:class_option)
-
-      base.class_option :pretend, :type => :boolean, :aliases => "-p", :group => :runtime,
-                                  :desc => "Run but do not make any changes"
-
-      base.class_option :force, :type => :boolean, :aliases => "-f", :group => :runtime,
-                                :desc => "Overwrite files that already exist"
-
-      base.class_option :skip, :type => :boolean, :aliases => "-s", :group => :runtime,
-                               :desc => "Skip files that already exist"
-
-      base.class_option :quiet, :type => :boolean, :aliases => "-q", :group => :runtime,
-                                :desc => "Supress status output"
     end
 
     module ClassMethods
@@ -33,7 +20,13 @@ class Thor
       # inherited paths and the source root.
       #
       def source_paths
-        @source_paths ||= []
+        @_source_paths ||= []
+      end
+
+      # Stores and return the source root for this class
+      def source_root(path=nil)
+        @_source_root = path if path
+        @_source_root
       end
 
       # Returns the source paths in the following order:
@@ -43,13 +36,27 @@ class Thor
       #   3) Parents source paths
       #
       def source_paths_for_search
-        @source_paths_for_search ||= begin
-          paths = []
-          paths += self.source_paths
-          paths << self.source_root if self.respond_to?(:source_root)
-          paths += from_superclass(:source_paths, [])
-          paths
-        end
+        paths = []
+        paths += self.source_paths
+        paths << self.source_root if self.source_root
+        paths += from_superclass(:source_paths, [])
+        paths
+      end
+
+      # Add runtime options that help actions execution.
+      #
+      def add_runtime_options!
+        class_option :force, :type => :boolean, :aliases => "-f", :group => :runtime,
+                             :desc => "Overwrite files that already exist"
+
+        class_option :pretend, :type => :boolean, :aliases => "-p", :group => :runtime,
+                               :desc => "Run but do not make any changes"
+
+        class_option :quiet, :type => :boolean, :aliases => "-q", :group => :runtime,
+                             :desc => "Supress status output"
+
+        class_option :skip, :type => :boolean, :aliases => "-s", :group => :runtime,
+                            :desc => "Skip files that already exist"
       end
     end
 
@@ -60,8 +67,7 @@ class Thor
     #                    It also accepts :force, :skip and :pretend to set the behavior
     #                    and the respective option.
     #
-    # destination_root<String>:: The root directory needed for some actions. It's also known
-    #                            as destination root.
+    # destination_root<String>:: The root directory needed for some actions.
     #
     def initialize(args=[], options={}, config={})
       self.behavior = case config[:behavior].to_s
@@ -80,7 +86,7 @@ class Thor
 
     # Wraps an action object and call it accordingly to the thor class behavior.
     #
-    def action(instance)
+    def action(instance) #:nodoc:
       if behavior == :revoke
         instance.revoke!
       else
@@ -110,23 +116,35 @@ class Thor
       remove_dot ? (path[2..-1] || '') : path
     end
 
-    # Receives a file or directory and search for it in the source paths. 
+    # Holds source paths in instance so they can be manipulated.
+    #
+    def source_paths
+      @source_paths ||= self.class.source_paths_for_search
+    end
+
+    # Receives a file or directory and search for it in the source paths.
     #
     def find_in_source_paths(file)
       relative_root = relative_to_original_destination_root(destination_root, false)
-      paths = self.class.source_paths_for_search
 
-      paths.each do |source|
+      source_paths.each do |source|
         source_file = File.expand_path(file, File.join(source, relative_root))
         return source_file if File.exists?(source_file)
       end
 
-      if paths.empty?
-        raise Error, "You don't have any source path defined for class #{self.class.name}. To fix this, " <<
-                     "you can define a source_root in your class."
-      else
-        raise Error, "Could not find #{file.inspect} in source paths."
+      message = "Could not find #{file.inspect} in any of your source paths. "
+
+      unless self.class.source_root
+        message << "Please invoke #{self.class.name}.source_root(PATH) with the PATH containing your templates. "
       end
+
+      if source_paths.empty?
+        message << "Currently you have no source paths."
+      else
+        message << "Your current source paths are: \n#{source_paths.join("\n")}"
+      end
+
+      raise Error, message
     end
 
     # Do something in the root or on a provided subfolder. If a relative path
@@ -172,15 +190,23 @@ class Thor
     #
     def apply(path, config={})
       verbose = config.fetch(:verbose, true)
-      path    = find_in_source_paths(path) unless path =~ /^http\:\/\//
+      is_uri  = path =~ /^https?\:\/\//
+      path    = find_in_source_paths(path) unless is_uri
 
       say_status :apply, path, verbose
       shell.padding += 1 if verbose
-      instance_eval(open(path).read)
+
+      if is_uri
+        contents = open(path, "Accept" => "application/x-thor-template") {|io| io.read }
+      else
+        contents = open(path) {|io| io.read }
+      end
+
+      instance_eval(contents, path)
       shell.padding -= 1 if verbose
     end
 
-    # Executes a command.
+    # Executes a command returning the contents of the command.
     #
     # ==== Parameters
     # command<String>:: the command to be executed.
@@ -216,10 +242,10 @@ class Thor
     #
     def run_ruby_script(command, config={})
       return unless behavior == :invoke
-      run "#{command}", config.merge(:with => Thor::Util.ruby_command)
+      run command, config.merge(:with => Thor::Util.ruby_command)
     end
 
-    # Run a thor command. A hash of options can be given and it's converted to 
+    # Run a thor command. A hash of options can be given and it's converted to
     # switches.
     #
     # ==== Parameters
@@ -239,12 +265,13 @@ class Thor
     def thor(task, *args)
       config  = args.last.is_a?(Hash) ? args.pop : {}
       verbose = config.key?(:verbose) ? config.delete(:verbose) : true
+      pretend = config.key?(:pretend) ? config.delete(:pretend) : false
 
       args.unshift task
       args.push Thor::Options.to_switches(config)
       command = args.join(' ').strip
 
-      run command, :with => :thor, :verbose => verbose
+      run command, :with => :thor, :verbose => verbose, :pretend => pretend
     end
 
     protected

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC
+    "-//W3C//DTD XHTML 1.1 plus MathML 2.0 plus SVG 1.1//EN"
+    "http://www.w3.org/2002/04/xhtml-math-svg/xhtml-math-svg.dtd">
+<html xmlns:svg='http://www.w3.org/2000/svg' xml:lang='en' xmlns='http://www.w3.org/1999/xhtml'>
+<head><meta content='application/xhtml+xml;charset=utf-8' http-equiv='Content-type' /><title>Collage</title></head>
+<body>
+<h1 id='collage'>Collage</h1>
+
+<p>This is a Rack middleware that will package all your Javascript into a single file (very much inspired by Rails&#8217; <code>javascript_include_tag(:all, :cache =&gt; true)</code>.</p>
+
+<p>Examples:</p>
+
+<pre><code>use Collage, :path =&gt; File.dirname(__FILE__) + &quot;/public&quot;
+
+use Collage, 
+  :path  =&gt; File.dirname(__FILE__) + &quot;/public&quot;,
+  :files =&gt; [&quot;jquery*.js&quot;, &quot;*.js&quot;]</code></pre>
+
+<p>Collage also provides a handy helper for your views:</p>
+
+<pre><code>&lt;%= Collage.html_tag(&quot;/public&quot;) %&gt;</code></pre>
+</body></html>

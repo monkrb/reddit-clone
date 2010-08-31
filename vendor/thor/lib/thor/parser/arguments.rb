@@ -1,5 +1,5 @@
 class Thor
-  class Arguments
+  class Arguments #:nodoc:
     NUMERIC = /(\d*\.\d+|\d+)/
 
     # Receives an array of args and returns two arrays, one with arguments
@@ -16,8 +16,9 @@ class Thor
       return arguments, args[Range.new(arguments.size, -1)]
     end
 
-    def self.parse(base, args)
-      new(base).parse(args)
+    def self.parse(*args)
+      to_parse = args.pop
+      new(*args).parse(to_parse)
     end
 
     # Takes an array of Thor::Argument objects.
@@ -49,6 +50,15 @@ class Thor
     end
 
     private
+
+      def no_or_skip?(arg)
+        arg =~ /^--(no|skip)-([-\w]+)$/
+        $2
+      end
+
+      def last?
+        @pile.empty?
+      end
 
       def peek
         @pile.first
@@ -109,23 +119,29 @@ class Thor
         array
       end
 
-      # Check if the peel is numeric ofrmat and return a Float or Integer.
+      # Check if the peek is numeric format and return a Float or Integer.
       # Otherwise raises an error.
       #
       def parse_numeric(name)
         return shift if peek.is_a?(Numeric)
 
         unless peek =~ NUMERIC && $& == peek
-          raise MalformattedArgumentError, "expected numeric value for '#{name}'; got #{peek.inspect}"
+          raise MalformattedArgumentError, "Expected numeric value for '#{name}'; got #{peek.inspect}"
         end
 
         $&.index('.') ? shift.to_f : shift.to_i
       end
 
-      # Parse string, i.e., just return the current value in the pile.
+      # Parse string:
+      # for --string-arg, just return the current value in the pile
+      # for --no-string-arg, nil
       #
       def parse_string(name)
-        shift
+        if no_or_skip?(name)
+          nil
+        else
+          shift
+        end
       end
 
       # Raises an error if @non_assigned_required array is not empty.
@@ -137,7 +153,7 @@ class Thor
           end.join("', '")
 
           class_name = self.class.name.split('::').last.downcase
-          raise RequiredArgumentMissingError, "no value provided for required #{class_name} '#{names}'"
+          raise RequiredArgumentMissingError, "No value provided for required #{class_name} '#{names}'"
         end
       end
 

@@ -18,12 +18,15 @@ class Thor
     #
     #   copy_file "doc/README"
     #
-    def copy_file(source, destination=nil, config={})
-      destination ||= source
+    def copy_file(source, *args, &block)
+      config = args.last.is_a?(Hash) ? args.pop : {}
+      destination = args.first || source
       source = File.expand_path(find_in_source_paths(source.to_s))
 
       create_file destination, nil, config do
-        File.read(source)
+        content = File.binread(source)
+        content = block.call(content) if block
+        content
       end
     end
 
@@ -44,9 +47,12 @@ class Thor
     #     content.split("\n").first
     #   end
     #
-    def get(source, destination=nil, config={}, &block)
+    def get(source, *args, &block)
+      config = args.last.is_a?(Hash) ? args.pop : {}
+      destination = args.first
+
       source = File.expand_path(find_in_source_paths(source.to_s)) unless source =~ /^http\:\/\//
-      render = open(source).read
+      render = open(source) {|input| input.binmode.read }
 
       destination ||= if block_given?
         block.arity == 1 ? block.call(render) : block.call
@@ -72,13 +78,17 @@ class Thor
     #
     #   template "doc/README"
     #
-    def template(source, destination=nil, config={})
-      destination ||= source
+    def template(source, *args, &block)
+      config = args.last.is_a?(Hash) ? args.pop : {}
+      destination = args.first || source
+
       source  = File.expand_path(find_in_source_paths(source.to_s))
       context = instance_eval('binding')
 
       create_file destination, nil, config do
-        ERB.new(::File.read(source), nil, '-').result(context)
+        content = ERB.new(::File.binread(source), nil, '-').result(context)
+        content = block.call(content) if block
+        content
       end
     end
 
@@ -100,7 +110,7 @@ class Thor
       FileUtils.chmod_R(mode, path) unless options[:pretend]
     end
 
-    # Prepend text to a file.
+    # Prepend text to a file. Since it depends on inject_into_file, it's reversible.
     #
     # ==== Parameters
     # path<String>:: path of the file to be changed
@@ -111,19 +121,17 @@ class Thor
     #
     #   prepend_file 'config/environments/test.rb', 'config.gem "rspec"'
     #
-    def prepend_file(path, data=nil, config={}, &block)
-      return unless behavior == :invoke
-      path = File.expand_path(path, destination_root)
-      say_status :prepend, relative_to_original_destination_root(path), config.fetch(:verbose, true)
-
-      unless options[:pretend]
-        content = data || block.call
-        content << File.read(path)
-        File.open(path, 'wb') { |file| file.write(content) }
-      end
+    #   prepend_file 'config/environments/test.rb' do
+    #     'config.gem "rspec"'
+    #   end
+    #
+    def prepend_file(path, *args, &block)
+      config = args.last.is_a?(Hash) ? args.pop : {}
+      config.merge!(:after => /\A/)
+      inject_into_file(path, *(args << config), &block)
     end
 
-    # Append text to a file.
+    # Append text to a file. Since it depends on inject_into_file, it's reversible.
     #
     # ==== Parameters
     # path<String>:: path of the file to be changed
@@ -134,11 +142,37 @@ class Thor
     #
     #   append_file 'config/environments/test.rb', 'config.gem "rspec"'
     #
-    def append_file(path, data=nil, config={}, &block)
-      return unless behavior == :invoke
-      path = File.expand_path(path, destination_root)
-      say_status :append, relative_to_original_destination_root(path), config.fetch(:verbose, true)
-      File.open(path, 'ab') { |file| file.write(data || block.call) } unless options[:pretend]
+    #   append_file 'config/environments/test.rb' do
+    #     'config.gem "rspec"'
+    #   end
+    #
+    def append_file(path, *args, &block)
+      config = args.last.is_a?(Hash) ? args.pop : {}
+      config.merge!(:before => /\z/)
+      inject_into_file(path, *(args << config), &block)
+    end
+
+    # Injects text right after the class definition. Since it depends on
+    # inject_into_file, it's reversible.
+    #
+    # ==== Parameters
+    # path<String>:: path of the file to be changed
+    # klass<String|Class>:: the class to be manipulated
+    # data<String>:: the data to append to the class, can be also given as a block.
+    # config<Hash>:: give :verbose => false to not log the status.
+    #
+    # ==== Examples
+    #
+    #   inject_into_class "app/controllers/application_controller.rb", "  filter_parameter :password\n"
+    #
+    #   inject_into_class "app/controllers/application_controller.rb", ApplicationController do
+    #     "  filter_parameter :password\n"
+    #   end
+    #
+    def inject_into_class(path, klass, *args, &block)
+      config = args.last.is_a?(Hash) ? args.pop : {}
+      config.merge!(:after => /class #{klass}\n|class #{klass} .*\n/)
+      inject_into_file(path, *(args << config), &block)
     end
 
     # Run a regular expression replacement on a file.
@@ -165,7 +199,7 @@ class Thor
       say_status :gsub, relative_to_original_destination_root(path), config.fetch(:verbose, true)
 
       unless options[:pretend]
-        content = File.read(path)
+        content = File.binread(path)
         content.gsub!(flag, *args, &block)
         File.open(path, 'wb') { |file| file.write(content) }
       end

@@ -25,7 +25,8 @@ class Dep
     end
 
     def vendor_path
-      Dir[File.join("vendor", "#{vendor_name}*", "lib")].first ||
+      Dir[File.join("vendor", vendor_name, "lib")].first ||
+        Dir[File.join("vendor", "#{vendor_name}*", "lib")].first ||
         Dir[File.join("vendor", name, "lib")].first
     end
 
@@ -62,7 +63,7 @@ class Dep
     @missing = []
 
     dependencies.each_line do |line|
-      next unless line =~ /^([\w\-_]+) ?([<~=> \d\.]+)?(?: \(([\w, ]+)\))?(?: ([a-z]+:\/\/.+?))?$/
+      next unless line =~ /^([\w\-_]+) ?([<~=> \w\.]+)?(?: \(([\w, ]+)\))?(?: ([a-z]+:\/\/.+?))?$/
       @dependencies << Dependency.new($1, $2, $3, $4)
     end
   end

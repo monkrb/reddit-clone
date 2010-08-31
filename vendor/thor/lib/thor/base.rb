@@ -8,7 +8,13 @@ require 'thor/task'
 require 'thor/util'
 
 class Thor
+  autoload :Actions,    'thor/actions'
+  autoload :RakeCompat, 'thor/rake_compat'
+
+  # Shortcuts for help.
   HELP_MAPPINGS       = %w(-h -? --help -D)
+
+  # Thor methods that should not be overwritten by the user.
   THOR_RESERVED_WORDS = %w(invoke shell options behavior root destination_root relative_root
                            action add_file create_file in_root inside run run_ruby_script)
 
@@ -32,9 +38,8 @@ class Thor
     # config<Hash>:: Configuration for this Thor class.
     #
     def initialize(args=[], options={}, config={})
-      Thor::Arguments.parse(self.class.arguments, args).each do |key, value|
-        send("#{key}=", value)
-      end
+      args = Thor::Arguments.parse(self.class.arguments, args)
+      args.each { |key, value| send("#{key}=", value) }
 
       parse_options = self.class.class_options
 
@@ -46,9 +51,9 @@ class Thor
         array_options, hash_options = [], options
       end
 
-      options = Thor::Options.parse(parse_options, array_options)
-      self.options = Thor::CoreExt::HashWithIndifferentAccess.new(options).merge!(hash_options)
-      self.options.freeze
+      opts = Thor::Options.new(parse_options, hash_options)
+      self.options = opts.parse(array_options)
+      opts.check_unknown! if self.class.check_unknown_options?(config)
     end
 
     class << self
@@ -78,7 +83,6 @@ class Thor
 
       # Whenever a class inherits from Thor or Thor::Group, we should track the
       # class and the file on Thor::Base. This is the method responsable for it.
-      # Also adds the source root to the source paths if the klass respond to it.
       #
       def register_klass_file(klass) #:nodoc:
         file = caller[1].match(/(.*):\d+/)[1]
@@ -90,6 +94,34 @@ class Thor
     end
 
     module ClassMethods
+      attr_accessor :debugging
+
+      def attr_reader(*) #:nodoc:
+        no_tasks { super }
+      end
+
+      def attr_writer(*) #:nodoc:
+        no_tasks { super }
+      end
+
+      def attr_accessor(*) #:nodoc:
+        no_tasks { super }
+      end
+
+      # If you want to raise an error for unknown options, call check_unknown_options!
+      # This is disabled by default to allow dynamic invocations.
+      def check_unknown_options!
+        @check_unknown_options = true
+      end
+
+      def check_unknown_options #:nodoc:
+        @check_unknown_options ||= from_superclass(:check_unknown_options, false)
+      end
+
+      def check_unknown_options?(config) #:nodoc:
+        !!check_unknown_options
+      end
+
       # Adds an argument to the class and creates an attr_accessor for it.
       #
       # Arguments are different from options in several aspects. The first one
@@ -246,7 +278,8 @@ class Thor
       # Returns the tasks for this Thor class.
       #
       # ==== Returns
-      # OrderedHash:: An ordered hash with this class tasks.
+      # OrderedHash:: An ordered hash with tasks names as keys and Thor::Task
+      #               objects as values.
       #
       def tasks
         @tasks ||= Thor::CoreExt::OrderedHash.new
@@ -255,7 +288,8 @@ class Thor
       # Returns the tasks for this Thor class and all subclasses.
       #
       # ==== Returns
-      # OrderedHash
+      # OrderedHash:: An ordered hash with tasks names as keys and Thor::Task
+      #               objects as values.
       #
       def all_tasks
         @all_tasks ||= from_superclass(:all_tasks, Thor::CoreExt::OrderedHash.new)
@@ -306,6 +340,7 @@ class Thor
       def no_tasks
         @no_tasks = true
         yield
+      ensure
         @no_tasks = false
       end
 
@@ -333,86 +368,86 @@ class Thor
       #
       def namespace(name=nil)
         case name
-          when nil
-            @namespace ||= Thor::Util.constant_to_namespace(self, false)
-          else
-            @namespace = name.to_s
+        when nil
+          @namespace ||= Thor::Util.namespace_from_thor_class(self)
+        else
+          @namespace = name.to_s
         end
       end
 
-      # Default way to start generators from the command line.
+      # Parses the task and options from the given args, instantiate the class
+      # and invoke the task. This method is used when the arguments must be parsed
+      # from an array. If you are inside Ruby and want to use a Thor class, you
+      # can simply initialize it:
       #
-      def start(given_args=ARGV, config={}) #:nodoc:
+      #   script = MyScript.new(args, options, config)
+      #   script.invoke(:task, first_arg, second_arg, third_arg)
+      #
+      def start(given_args=ARGV, config={})
+        self.debugging = given_args.delete("--debug")
         config[:shell] ||= Thor::Base.shell.new
-        yield
+        dispatch(nil, given_args.dup, nil, config)
       rescue Thor::Error => e
-        if given_args.include?("--debug")
-          raise e
+        debugging ? (raise e) : config[:shell].error(e.message)
+        exit(1) if exit_on_failure?
+      end
+
+      def handle_no_task_error(task) #:nodoc:
+        if $thor_runner
+          raise UndefinedTaskError, "Could not find task #{task.inspect} in #{namespace.inspect} namespace."
         else
-          config[:shell].error e.message
+          raise UndefinedTaskError, "Could not find task #{task.inspect}."
         end
+      end
+
+      def handle_argument_error(task, error) #:nodoc:
+        raise InvocationError, "#{task.name.inspect} was called incorrectly. Call as #{self.banner(task).inspect}."
       end
 
       protected
 
         # Prints the class options per group. If an option does not belong to
-        # any group, it uses the ungrouped name value. This method provide to
-        # hooks to add extra options, one of them if the third argument called
-        # extra_group that should be a hash in the format :group => Array[Options].
+        # any group, it's printed as Class option.
         #
-        # The second is by returning a lamda used to print values. The lambda
-        # requires two options: the group name and the array of options.
-        #
-        def class_options_help(shell, ungrouped_name=nil, extra_group=nil) #:nodoc:
-          groups = {}
-
+        def class_options_help(shell, groups={}) #:nodoc:
+          # Group options by group
           class_options.each do |_, value|
             groups[value.group] ||= []
             groups[value.group] << value
           end
 
-          printer = proc do |group_name, options|
-            list = []
-            padding = options.collect{ |o| o.aliases.size  }.max.to_i * 4
-
-            options.each do |option|
-              item = [ option.usage(padding) ]
-
-              item << if option.description
-                "# #{option.description}"
-              else
-                ""
-              end
-
-              list << item
-              list << [ "", "# Default: #{option.default}" ] if option.show_default?
-            end
-
-            unless list.empty?
-              if group_name
-                shell.say "#{group_name} options:"
-              else
-                shell.say "Options:"
-              end
-
-              shell.print_table(list, :ident => 2)
-              shell.say ""
-            end
-          end
-
           # Deal with default group
           global_options = groups.delete(nil) || []
-          printer.call(ungrouped_name, global_options) if global_options
+          print_options(shell, global_options)
 
           # Print all others
-          groups = extra_group.merge(groups) if extra_group
-          groups.each(&printer)
-          printer
+          groups.each do |group_name, options|
+            print_options(shell, options, group_name)
+          end
+        end
+
+        # Receives a set of options and print them.
+        def print_options(shell, options, group_name=nil)
+          return if options.empty?
+
+          list = []
+          padding = options.collect{ |o| o.aliases.size }.max.to_i * 4
+
+          options.each do |option|
+            item = [ option.usage(padding) ]
+            item.push(option.description ? "# #{option.description}" : "")
+
+            list << item
+            list << [ "", "# Default: #{option.default}" ] if option.show_default?
+          end
+
+          shell.say(group_name ? "#{group_name} options:" : "Options:")
+          shell.print_table(list, :ident => 2)
+          shell.say ""
         end
 
         # Raises an error if the word given is a Thor reserved word.
-        #
-        def is_thor_reserved_word?(word, type)
+        def is_thor_reserved_word?(word, type) #:nodoc:
           return false unless THOR_RESERVED_WORDS.include?(word.to_s)
           raise "#{word.inspect} is a Thor reserved word and cannot be defined as #{type}"
         end
@@ -422,11 +457,10 @@ class Thor
         # ==== Parameters
         # name<Symbol>:: The name of the argument.
         # options<Hash>:: Described in both class_option and method_option.
-        #
-        def build_option(name, options, scope)
+        def build_option(name, options, scope) #:nodoc:
           scope[name] = Thor::Option.new(name, options[:desc], options[:required],
                                                options[:type], options[:default], options[:banner],
-                                               options[:group], options[:aliases])
+                                               options[:lazy_default], options[:group], options[:aliases])
         end
 
         # Receives a hash of options, parse them and add to the scope. This is a
@@ -436,8 +470,7 @@ class Thor
         #
         # ==== Parameters
         # Hash[Symbol => Object]
-        #
-        def build_options(options, scope)
+        def build_options(options, scope) #:nodoc:
           options.each do |key, value|
             scope[key] = Thor::Option.parse(key, value)
           end
@@ -446,8 +479,7 @@ class Thor
         # Finds a task with the given name. If the task belongs to the current
         # class, just return it, otherwise dup it and add the fresh copy to the
         # current task hash.
-        #
-        def find_and_refresh_task(name)
+        def find_and_refresh_task(name) #:nodoc:
           task = if task = tasks[name.to_s]
             task
           elsif task = all_tasks[name.to_s]
@@ -459,14 +491,12 @@ class Thor
 
         # Everytime someone inherits from a Thor class, register the klass
         # and file into baseclass.
-        #
         def inherited(klass)
           Thor::Base.register_klass_file(klass)
         end
 
         # Fire this callback whenever a method is added. Added methods are
-        # tracked as tasks if the requirements set by valid_task? are valid.
-        #
+        # tracked as tasks by invoking the create_task method.
         def method_added(meth)
           meth = meth.to_s
 
@@ -486,8 +516,7 @@ class Thor
         end
 
         # Retrieves a value from superclass. If it reaches the baseclass,
-        # returns nil.
-        #
+        # returns default.
         def from_superclass(method, default=nil)
           if self == baseclass || !superclass.respond_to?(method, true)
             default
@@ -495,6 +524,11 @@ class Thor
             value = superclass.send(method)
             value.dup if value
           end
+        end
+
+        # A flag that makes the process exit with status 1 if any error happens.
+        def exit_on_failure?
+          false
         end
 
         # SIGNATURE: Sets the baseclass. This is where the superclass lookup
@@ -511,6 +545,12 @@ class Thor
         # class.
         def initialize_added #:nodoc:
         end
+
+        # SIGNATURE: The hook invoked by start.
+        def dispatch(task, given_args, given_opts, config) #:nodoc:
+          raise NotImplementedError
+        end
+
     end
   end
 end
