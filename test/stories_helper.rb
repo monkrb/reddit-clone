@@ -1,16 +1,13 @@
 require "test_helper"
 
-require "webrat"
 require "rack/test"
+require "capybara/dsl"
 require "stories"
 require "stories/runner"
 
-Webrat.configure do |config|
-  config.mode = :rack_test
-end
+Capybara.default_driver = :selenium
+Capybara.app = Main
 
 class Test::Unit::TestCase
-  include Webrat::Methods
-  include Webrat::Matchers
-  include Stories::Webrat
+  include Capybara
 end
