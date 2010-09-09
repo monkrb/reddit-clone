@@ -1,291 +1,249 @@
-!width = 960px
-!grid_link_width = (!width - 60px) / 3 - 30px - 10px
+$width: 960px
+$grid_link_width: ($width - 60px) / 3 - 30px - 10px
 
 body
-  :background-color whitesmoke
-  :font-family "Lucida Grande", sans-serif
-  :font-size 0.8em
-  :color #333
+  background-color: whitesmoke
+  font-family: "Lucida Grande", sans-serif
+  font-size: 0.8em
+  color: #333333
 
 =clearfix
-  *display:     inline-block
+  *display: inline-block
   &:after
-    content:    " "
-    display:    block
-    height:     0
-    clear:      both
+    content: " "
+    display: block
+    height: 0
+    clear: both
     visibility: hidden
 
 .clear
-  :clear both
-  :width 100%
-  :font-size 0px
+  clear: both
+  width: 100%
+  font-size: 0px
 
-= title
-  :font-family "Helvetica", sans-serif
-  :font-size 18px
-  :font-weight bold
+=title
+  font-family: "Helvetica", sans-serif
+  font-size: 18px
+  font-weight: bold
 
-= hover
-  :text-decoration none
-
+=hover
+  text-decoration: none
   &:hover
-    :text-decoration underline
+    text-decoration: underline
 
-= border
-  :border-bottom 1px solid #ccc
+=border
+  border-bottom: 1px solid #cccccc
 
 h1
-  :font-size 2em
-  :line-height 2.4em
+  font-size: 2em
+  line-height: 2.4em
 
 h2
-  :font-size 1.4em
-  :line-height 2em
+  font-size: 1.4em
+  line-height: 2em
 
 a
   +hover
-  :color #069
+  color: #006699
 
 form
   > p
     label
       +title
-
     input, button
-      :font-size 2em
-      :margin 5px 0 0 0
-
+      font-size: 2em
+      margin: 5px 0 0 0
   p
-    :margin 10px 0
-
+    margin: 10px 0
   fieldset
-    :border-width 0
-    :padding 0
-    :margin 20px 0
-
+    border-width: 0
+    padding: 0
+    margin: 20px 0
     legend
       +title
-
     p
-      :margin-left 5px
-      :margin-top 11px
-
+      margin-left: 5px
+      margin-top: 11px
     input[type="text"]
-      :margin 5px 0 0 0
-
+      margin: 5px 0 0 0
   span.example
-    :color #777
-
+    color: #777777
   #post_date
-    :width 190px
-
+    width: 190px
   button.up
-    :background url(/images/up.gif)
-    :border 0
-    :height 15px
-    :width 14px
-
+    background: url(/images/up.gif)
+    border: 0
+    height: 15px
+    width: 14px
   button.up-selected
-    :background url(/images/up-selected.gif)
-    :border 0
-    :height 15px
-    :width 14px
+    background: url(/images/up-selected.gif)
+    border: 0
+    height: 15px
+    width: 14px
 
 #header
-  :padding 15px 0 25px 0
+  padding: 15px 0 25px 0
 
 #navigation
-  :text-align right
-  :width = !width
-  :margin auto
-
+  text-align: right
+  width: $width
+  margin: auto
   ul
-    :font-size 11px
-    :float right
-
+    font-size: 11px
+    float: right
     li
-      :float left
-      :padding 2px 5px 3px 5px
-      :border-right 1px solid #CCCCCC
-
+      float: left
+      padding: 2px 5px 3px 5px
+      border-right: 1px solid #cccccc
       &:first-child
-        :padding-left 0
-
+        padding-left: 0
       &:last-child
-        :border-right 0
+        border-right: 0
 
 #brand
-  :width = !width
-  :margin auto
-  :margin-bottom 1em
-  :margin-top 4em
-
+  width: $width
+  margin: auto
+  margin-bottom: 1em
+  margin-top: 4em
   p
-    :font-size 3.4em
-    :font-weight bold
+    font-size: 3.4em
+    font-weight: bold
   a
-    :text-decoration none
-    :color black
-    :letter-spacing -2px
-    :font-family "Trebuchet MS", "Lucida Grande", sans-serif
+    text-decoration: none
+    color: black
+    letter-spacing: -2px
+    font-family: "Trebuchet MS", "Lucida Grande", sans-serif
 
 #content
-  :width = !width
-  :margin auto
-  :padding 0 40px
-  :-webkit-border-radius 1em
-  :-moz-border-radius 1em
+  width: $width
+  margin: auto
+  padding: 0 40px
+  -webkit-border-radius: 1em
+  -moz-border-radius: 1em
 
 .errors
-  :margin 10px 0 20px 0
-  :color crimson
-
+  margin: 10px 0 20px 0
+  color: crimson
   ul
     li
-      :margin 7px 0
+      margin: 7px 0
 
 #grid
   +clearfix
-  :margin 15px 0
-  :position relative
-
+  margin: 15px 0
+  position: relative
   a:visited
-    :color #7a9bac
-
+    color: #7a9bac
   .list
-    :margin 0 30px 0 0
-    :float left
-    :width = (!width - 60px) / 3
-    :font-size 11px
-
+    margin: 0 30px 0 0
+    float: left
+    width: ($width - 60px) / 3
+    font-size: 11px
     &.just_added
-      :margin-right 0
-
+      margin-right: 0
     p
-      :margin 10px 5px
-      :color #666
-
+      margin: 10px 5px
+      color: #666666
     h2
       +title
       +border
-      :padding 0 3px
-
+      padding: 0 3px
     td
-      :padding 4px
-
+      padding: 4px
     li
       +clearfix
       +border
-      :clear both
-      :padding 5px 5px 4px 5px
-      :line-height 15px
-
+      clear: both
+      padding: 5px 5px 4px 5px
+      line-height: 15px
       &:last-child
-        :border-bottom-width 0
-
+        border-bottom-width: 0
     a
-      :display block
-      :width = !grid_link_width
-      :height 15px
-      :float left
-      :overflow hidden
-
+      display: block
+      width: $grid_link_width
+      height: 15px
+      float: left
+      overflow: hidden
     form
-      :float left
-      :width 14px
-
+      float: left
+      width: 14px
     .votes
       +title
-      :float left
-      :display block
-      :text-align right
-      :width 20px
-      :color #999
-      :font-size 14px
-      :line-height 16px
-      :padding 1px 0 0 0
-
+      float: left
+      display: block
+      text-align: right
+      width: 20px
+      color: #999999
+      font-size: 14px
+      line-height: 16px
+      padding: 1px 0 0 0
   .next, .prev
-    :text-decoration none
-    :font-size 18px
-    :color #666
-
+    text-decoration: none
+    font-size: 18px
+    color: #666666
   table
-    :table-layout fixed
-    :width 100%
-
+    table-layout: fixed
+    width: 100%
     tr
-      :border-bottom 1px solid #dadada
-
+      border-bottom: 1px solid #dadada
     td
-      :vertical-align middle
+      vertical-align: middle
 
 body.logged_in
   #grid
     .list
       a
-        :width = !grid_link_width - 20px
+        width: $grid_link_width - 20px
 
 form.vote
-  :margin 0 5px 0 0
-  :display inline
-  :vertical-align middle
-  :line-height 12px
-
+  margin: 0 5px 0 0
+  display: inline
+  vertical-align: middle
+  line-height: 12px
   button
-    :border-width 0
-    :background-color transparent
-    :padding 0
-    :margin 0
-    :font-size 12px
-    :cursor pointer
-    :color #CCC
-
+    border-width: 0
+    background-color: transparent
+    padding: 0
+    margin: 0
+    font-size: 12px
+    cursor: pointer
+    color: #cccccc
     &.voted
-      :color crimson
+      color: crimson
 
 #post
-  :position relative
-
+  position: relative
   h1
     +title
-    :font-size 26px
-    :line-height 26px
-    :margin 12px 0 3px 0
-
+    font-size: 26px
+    line-height: 26px
+    margin: 12px 0 3px 0
   form.vote
-    :font-size 30px
-    :position absolute
-    :left -20px
-
+    font-size: 30px
+    position: absolute
+    left: -20px
   p
-    :padding 5px 0 4px 0
-    :font-size 11px
-
+    padding: 5px 0 4px 0
+    font-size: 11px
     &.url
       +border
-      :padding-bottom 10px
-      :margin-bottom 3px
+      padding-bottom: 10px
+      margin-bottom: 3px
 
 #footer
-  :margin 30px 0 5px 0
-  :border-top 1px solid #ddd
-  :padding 9px 0 0 0
-  :font-size 11px
-  :color #666
-
+  margin: 30px 0 5px 0
+  border-top: 1px solid #dddddd
+  padding: 9px 0 0 0
+  font-size: 11px
+  color: #666666
   p
-    :padding-top 4px
-    :float left
-    :line-height 16px
-
+    padding-top: 4px
+    float: left
+    line-height: 16px
     &.sponsor
-      :padding-top 0
-      :float right
-
+      padding-top: 0
+      float: right
   img
-    :vertical-align middle
-
+    vertical-align: middle
   a
-    :color #333
+    color: #333333
