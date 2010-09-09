@@ -38,7 +38,7 @@ class Post < Ohm::Model
   end
 
   def self.by_date(date)
-    find(:date, format_date(date))
+    find(:date => format_date(date))
   end
 
   def date
