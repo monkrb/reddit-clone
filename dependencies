@@ -6,7 +6,6 @@ haml 3.0.18 git://github.com/nex3/haml.git
 monk-glue git://github.com/monkrb/glue.git
 ohm git://github.com/soveran/ohm.git
 override 0.0.10 (test) git://github.com/soveran/override.git
-quietbacktrace 0.1.1 git://github.com/thoughtbot/quietbacktrace.git
 rack 1.2.1 git://github.com/rack/rack.git
 rack-test 0.5.4 (test) git://github.com/brynary/rack-test.git
 redis 2.0.5 git://github.com/ezmobius/redis-rb.git
