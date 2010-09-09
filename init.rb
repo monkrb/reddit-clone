@@ -12,7 +12,7 @@ require "monk/glue"
 require "ohm"
 require "haml"
 require "sass"
-
+require "collage"
 require "spawn"
 require "faker"
 
