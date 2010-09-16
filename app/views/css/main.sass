@@ -91,6 +91,7 @@ form
   ul
     font-size: 11px
     float: right
+    list-style-type: none
     li
       float: left
       padding: 2px 5px 3px 5px
@@ -150,14 +151,16 @@ form
       padding: 0 3px
     td
       padding: 4px
-    li
-      +clearfix
-      +border
-      clear: both
-      padding: 5px 5px 4px 5px
-      line-height: 15px
-      &:last-child
-        border-bottom-width: 0
+    ul
+      list-style-type: none
+      li
+        +clearfix
+        +border
+        clear: both
+        padding: 5px 5px 4px 5px
+        line-height: 15px
+        &:last-child
+          border-bottom-width: 0
     a
       display: block
       width: $grid_link_width
