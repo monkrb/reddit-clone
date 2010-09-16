@@ -27,10 +27,10 @@ class Main
   post "/signup" do
     @user = signup(params[:user])
 
-    if @user.id
-      redirect "/", 303
-    else
+    if @user.new?
       haml :"signup"
+    else
+      redirect "/", 303
     end
   end
 
@@ -81,7 +81,7 @@ class Main
     end
 
     def logged_in?
-      !! current_user
+      !!current_user
     end
 
     def ensure_current_account(username)

@@ -5,7 +5,7 @@ require "capybara/dsl"
 require "protest/stories"
 
 Capybara.default_driver = :rack_test
-Capybara.app = Main
+Capybara.app = Main.new
 
 class Protest::TestCase
   include Capybara
@@ -14,8 +14,16 @@ class Protest::TestCase
     assert page.has_content?(text)
   end
 
+  def assert_not_contain(text)
+    assert !page.has_content?(text)
+  end
+
   def status
     Capybara.current_session.driver.rack_server.response.status
+  end
+
+  def teardown
+    Capybara.reset_sessions!
   end
 
   def url(path)

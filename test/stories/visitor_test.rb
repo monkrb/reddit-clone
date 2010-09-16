@@ -230,7 +230,7 @@ Protest.story "As a visitor I want to see the link's date so that I know when th
     @post = Post.spawn \
       :name => "Ruby Tuesday",
       :location => "http://ruby-lang.org",
-      :datetime => "10/07/2009 00:00"
+      :datetime => "2009-07-10 00:00"
   end
 
   scenario "A user visits a post" do
@@ -238,7 +238,7 @@ Protest.story "As a visitor I want to see the link's date so that I know when th
 
     visit "/posts/#{@post.id}"
 
-    assert_contain "10/07/2009"
+    assert_contain "07/10/2009"
   end
 end
 
@@ -255,16 +255,16 @@ Protest.story "As a visitor I want to see the post's location linked so I can vi
 
     visit "/posts/#{@post.id}"
 
-    assert_have_selector "h1", :content => "Ruby Tuesday"
-    assert_have_xpath "//a[@href='http://ruby-lang.org']"
+    assert has_css? "h1", :content => "Ruby Tuesday"
+    assert has_xpath? "//a[@href='http://ruby-lang.org']"
   end
 end
 
 Protest.story "As a visitor I want to see today and yesterday's links so that I can find something to do." do
   setup do
-    @today = Post.spawn :name => "Ruby Tuesday", :datetime => "07/16/2009"
-    @tomorrow = Post.spawn :name => "Ruby Hoedown", :datetime => "07/15/2009"
-    @the_day_before_yesterday = Post.spawn :name => "Past Ruby", :datetime => "07/14/2009"
+    @today = Post.spawn :name => "Ruby Tuesday", :datetime => "2009-07-16"
+    @tomorrow = Post.spawn :name => "Ruby Hoedown", :datetime => "2009-07-15"
+    @the_day_before_yesterday = Post.spawn :name => "Past Ruby", :datetime => "2009-07-14"
   end
 
   scenario "A user visits a post he created" do
@@ -295,14 +295,14 @@ Protest.story "As a visitor I want to see what has been just posted so that I kn
   scenario "A user visits the homepage and sees recently posted stuff" do
     visit "/"
 
-    assert_have_selector ".just_added a", :content => "JRuby 2.0 Released"
-    assert_have_selector ".just_added a", :content => "JRuby 2.1 Released (bugfix)"
+    assert has_css? ".just_added a", :content => "JRuby 2.0 Released"
+    assert has_css? ".just_added a", :content => "JRuby 2.1 Released (bugfix)"
   end
 end
 
 Protest.story "As a visitor I want to see links for any given date so I can make plans." do
   setup do
-    @date = "06/28/2009"
+    @date = "2009-06-28"
     @post = Post.spawn :datetime => @date
   end
 
@@ -340,7 +340,7 @@ Protest.story "As a user I want to vote for a post so that I can increase its po
       click_button "♥"
     end
 
-    assert_have_selector "span.votes", :content => "1"
+    assert has_css? "span.votes", :content => "1"
   end
 
   scenario "A user cannot vote more than once" do
@@ -352,7 +352,7 @@ Protest.story "As a user I want to vote for a post so that I can increase its po
       click_button "♥"
     end
 
-    assert_have_selector "span.votes", :content => "1"
+    assert has_css? "span.votes", :content => "1"
   end
 end
 
@@ -367,7 +367,7 @@ Protest.story "As a visitor I want to see how many votes a post has so I can kno
   scenario "A user visits a post that has received some votes" do
     visit "/posts/#{@post.id}"
 
-    assert_have_selector "span.votes", :content => "3"
+    assert has_css? "span.votes", :content => "3"
   end
 end
 
@@ -386,15 +386,15 @@ Protest.story "As a user I want to remove my vote for a post so that I can refle
       click_button "♥"
     end
 
-    assert_have_xpath("//button[@class='voted']")
-    assert_have_selector "span.votes", :content => "1"
+    assert has_xpath?("//button[@class='voted']")
+    assert has_css? "span.votes", :content => "1"
 
     report "Vote for the post" do
       click_button "♥"
     end
 
-    assert_have_xpath("//button[@class='']")
-    assert_have_selector "span.votes", :content => "0"
+    assert has_xpath?("//button[@class='']")
+    assert has_css? "span.votes", :content => "0"
   end
 end
 

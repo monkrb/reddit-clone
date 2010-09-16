@@ -29,7 +29,7 @@ end
 include Override
 
 override(Date, :today => Date.parse("2009-07-16"))
-override(Time, :now => Time.parse("2009-07-16 16:21:00"))
+override(Time, :now => DateTime.parse("2009-07-16 16:21").to_time)
 
 class Protest::TestCase
   include Rack::Test::Methods

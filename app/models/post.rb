@@ -42,7 +42,7 @@ class Post < Ohm::Model
   end
 
   def date
-    format_date(Time.parse(datetime).send(:to_date))
+    format_date(DateTime.parse(datetime).send(:to_date))
   end
 
   def location=(value)
