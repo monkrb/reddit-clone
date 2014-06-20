@@ -3,7 +3,7 @@
 
 - errors_on @user do |error|
   - error.on [:username, :not_present], "Mind providing a username?"
-  - error.on [[:username], :not_unique] do
+  - error.on [:username, :not_unique] do
     %li
       = "Someone else owns the username “#{@user.username}”."
       %a(href="/login?username=#{@user.username}") Maybe it's you?

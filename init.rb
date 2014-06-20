@@ -12,7 +12,7 @@ require "monk/glue"
 require "ohm"
 require "haml"
 require "sass"
-
+require "collage"
 require "spawn"
 require "faker"
 
@@ -23,11 +23,15 @@ class Main < Monk::Glue
 end
 
 # Connect to redis database.
-Ohm.connect(settings(:redis))
+Ohm.connect(monk_settings(:redis))
 
 # Load all application files.
 Dir[root_path("app/**/*.rb")].each do |file|
   require file
+end
+
+if defined? Encoding
+  Encoding.default_external = Encoding::UTF_8
 end
 
 Main.run! if Main.run?

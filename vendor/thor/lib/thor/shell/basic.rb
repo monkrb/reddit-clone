@@ -11,9 +11,9 @@ class Thor
         @base, @padding = nil, 0
       end
 
-      # Do not allow padding to be less than zero.
+      # Sets the output padding, not allowing less than zero values.
       #
-      def padding=(value) #:nodoc:
+      def padding=(value)
         @padding = [0, value].max
       end
 
@@ -34,17 +34,18 @@ class Thor
       # ==== Example
       # say("I know you knew that.")
       #
-      def say(message="", color=nil, force_new_line=false)
-        message  = message.to_s
-        new_line = force_new_line || !(message[-1, 1] == " " || message[-1, 1] == "\t")
-        message  = set_color(message, color) if color
+      def say(message="", color=nil, force_new_line=(message.to_s !~ /( |\t)$/))
+        message = message.to_s
+        message = set_color(message, color) if color
 
-        if new_line
-          $stdout.puts(message)
+        spaces = "  " * padding
+
+        if force_new_line
+          $stdout.puts(spaces + message)
         else
-          $stdout.print(message)
-          $stdout.flush
+          $stdout.print(spaces + message)
         end
+        $stdout.flush
       end
 
       # Say a status with the given color and appends the message. Since this
@@ -52,14 +53,16 @@ class Thor
       # in log_status, avoiding the message from being shown. If a Symbol is
       # given in log_status, it's used as the color.
       #
-      def say_status(status, message, log_status=true) #:nodoc:
+      def say_status(status, message, log_status=true)
         return if quiet? || log_status == false
         spaces = "  " * (padding + 1)
         color  = log_status.is_a?(Symbol) ? log_status : :green
 
         status = status.to_s.rjust(12)
         status = set_color status, color, true if color
-        say "#{status}#{spaces}#{message}", nil, true
+
+        $stdout.puts "#{status}#{spaces}#{message}"
+        $stdout.flush
       end
 
       # Make a question the to user and returns true if the user replies "y" or
@@ -76,52 +79,69 @@ class Thor
         !yes?(statement, color)
       end
 
-      # Prints a list of items.
-      #
-      # ==== Parameters
-      # list<Array[String, String, ...]>
-      # mode<Symbol>:: Can be :rows or :inline. Defaults to :rows.
-      #
-      def print_list(list, mode=:rows)
-        return if list.empty?
-
-        content = case mode
-          when :inline
-            last = list.pop
-            "#{list.join(", ")}, and #{last}"
-          else # rows
-            list.join("\n")
-        end
-
-        $stdout.puts content
-      end
-
       # Prints a table.
       #
       # ==== Parameters
       # Array[Array[String, String, ...]]
       #
       # ==== Options
-      # ident<Integer>:: Ident the first column by ident value.
-      # emphasize_last<Boolean>:: When true, add a different behavior to the last column.
+      # ident<Integer>:: Indent the first column by ident value.
+      # colwidth<Integer>:: Force the first column to colwidth spaces wide.
       #
       def print_table(table, options={})
         return if table.empty?
 
-        formats = []
-        0.upto(table.first.length - 2) do |i|
-          maxima = table.max{ |a,b| a[i].size <=> b[i].size }[i].size
+        formats, ident, colwidth = [], options[:ident].to_i, options[:colwidth]
+        options[:truncate] = terminal_width if options[:truncate] == true
+
+        formats << "%-#{colwidth + 2}s" if colwidth
+        start = colwidth ? 1 : 0
+
+        start.upto(table.first.length - 2) do |i|
+          maxima ||= table.max{|a,b| a[i].size <=> b[i].size }[i].size
           formats << "%-#{maxima + 2}s"
         end
 
-        formats[0] = formats[0].insert(0, " " * options[:ident]) if options[:ident]
+        formats[0] = formats[0].insert(0, " " * ident)
         formats << "%s"
 
         table.each do |row|
+          sentence = ""
+
           row.each_with_index do |column, i|
-            $stdout.print formats[i] % column.to_s
+            sentence << formats[i] % column.to_s
           end
-          $stdout.puts
+
+          sentence = truncate(sentence, options[:truncate]) if options[:truncate]
+          $stdout.puts sentence
+        end
+      end
+
+      # Prints a long string, word-wrapping the text to the current width of the
+      # terminal display. Ideal for printing heredocs.
+      #
+      # ==== Parameters
+      # String
+      #
+      # ==== Options
+      # ident<Integer>:: Indent each line of the printed paragraph by ident value.
+      #
+      def print_wrapped(message, options={})
+        ident = options[:ident] || 0
+        width = terminal_width - ident
+        paras = message.split("\n\n")
+
+        paras.map! do |unwrapped|
+          unwrapped.strip.gsub(/\n/, " ").squeeze(" ").
+          gsub(/.{1,#{width}}(?:\s|\Z)/){($& + 5.chr).
+          gsub(/\n\005/,"\n").gsub(/\005/,"\n")}
+        end
+
+        paras.each do |para|
+          para.split("\n").each do |line|
+            $stdout.puts line.insert(0, " " * ident)
+          end
+          $stdout.puts unless para == paras.last
         end
       end
 
@@ -131,7 +151,7 @@ class Thor
       #
       # ==== Parameters
       # destination<String>:: the destination file to solve conflicts
-      # block<Proc>:: an optional proc that returns the value to be used in diff
+      # block<Proc>:: an optional block that returns the value to be used in diff
       #
       def file_collision(destination)
         return true if @always_force
@@ -141,7 +161,7 @@ class Thor
           answer = ask %[Overwrite #{destination}? (enter "h" for help) #{options}]
 
           case answer
-            when is?(:yes), is?(:force)
+            when is?(:yes), is?(:force), ""
               return true
             when is?(:no), is?(:skip)
               return false
@@ -164,19 +184,20 @@ class Thor
       # wrong, you can always raise an exception. If you raise a Thor::Error, it
       # will be rescued and wrapped in the method below.
       #
-      def error(statement) #:nodoc:
+      def error(statement)
         $stderr.puts statement
       end
 
-      # Apply color to the given string with optional bold.
+      # Apply color to the given string with optional bold. Disabled in the
+      # Thor::Shell::Basic class.
       #
-      def set_color(string, color, bold=false)
+      def set_color(string, color, bold=false) #:nodoc:
         string
       end
 
       protected
 
-        def is?(value)
+        def is?(value) #:nodoc:
           value = value.to_s
 
           if value.size == 1
@@ -186,7 +207,7 @@ class Thor
           end
         end
 
-        def file_collision_help
+        def file_collision_help #:nodoc:
 <<HELP
 Y - yes, overwrite
 n - no, do not overwrite
@@ -197,18 +218,56 @@ h - help, show this help
 HELP
         end
 
-        def show_diff(destination, content)
+        def show_diff(destination, content) #:nodoc:
           diff_cmd = ENV['THOR_DIFF'] || ENV['RAILS_DIFF'] || 'diff -u'
 
           Tempfile.open(File.basename(destination), File.dirname(destination)) do |temp|
             temp.write content
             temp.rewind
-            say `#{diff_cmd} "#{destination}" "#{temp.path}"`
+            system %(#{diff_cmd} "#{destination}" "#{temp.path}")
           end
         end
 
-        def quiet?
+        def quiet? #:nodoc:
           base && base.options[:quiet]
+        end
+
+        # This code was copied from Rake, available under MIT-LICENSE
+        # Copyright (c) 2003, 2004 Jim Weirich
+        def terminal_width
+          if ENV['THOR_COLUMNS']
+            result = ENV['THOR_COLUMNS'].to_i
+          else
+            result = unix? ? dynamic_width : 80
+          end
+          (result < 10) ? 80 : result
+        rescue
+          80
+        end
+
+        # Calculate the dynamic width of the terminal
+        def dynamic_width
+          @dynamic_width ||= (dynamic_width_stty.nonzero? || dynamic_width_tput)
+        end
+
+        def dynamic_width_stty
+          %x{stty size 2>/dev/null}.split[1].to_i
+        end
+
+        def dynamic_width_tput
+          %x{tput cols 2>/dev/null}.to_i
+        end
+
+        def unix?
+          RUBY_PLATFORM =~ /(aix|darwin|linux|(net|free|open)bsd|cygwin|solaris|irix|hpux)/i
+        end
+
+        def truncate(string, width)
+          if string.length <= width
+            string
+          else
+            ( string[0, width-3] || "" ) + "..."
+          end
         end
 
     end

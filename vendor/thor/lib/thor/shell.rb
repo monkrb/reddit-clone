@@ -1,11 +1,18 @@
-require 'thor/shell/color'
+require 'rbconfig'
 
 class Thor
   module Base
-    # Returns the shell used in all Thor classes. Default to color one.
+    # Returns the shell used in all Thor classes. If you are in a Unix platform
+    # it will use a colored log, otherwise it will use a basic one without color.
     #
     def self.shell
-      @shell ||= Thor::Shell::Color
+      @shell ||= if ENV['THOR_SHELL'] && ENV['THOR_SHELL'].size > 0
+        Thor::Shell.const_get(ENV['THOR_SHELL'])
+      elsif RbConfig::CONFIG['host_os'] =~ /mswin|mingw/
+        Thor::Shell::Basic
+      else
+        Thor::Shell::Color
+      end
     end
 
     # Sets the shell used in all Thor classes.
@@ -16,7 +23,11 @@ class Thor
   end
 
   module Shell
-    SHELL_DELEGATED_METHODS = [:ask, :yes?, :no?, :say, :say_status, :print_list, :print_table]
+    SHELL_DELEGATED_METHODS = [:ask, :yes?, :no?, :say, :say_status, :print_table]
+
+    autoload :Basic, 'thor/shell/basic'
+    autoload :Color, 'thor/shell/color'
+    autoload :HTML,  'thor/shell/html'
 
     # Add shell to initialize config values.
     #
@@ -39,19 +50,16 @@ class Thor
 
     # Holds the shell for the given Thor instance. If no shell is given,
     # it gets a default shell from Thor::Base.shell.
-    #
     def shell
       @shell ||= Thor::Base.shell.new
     end
 
     # Sets the shell for this thor class.
-    #
     def shell=(shell)
       @shell = shell
     end
 
     # Common methods that are delegated to the shell.
-    #
     SHELL_DELEGATED_METHODS.each do |method|
       module_eval <<-METHOD, __FILE__, __LINE__
         def #{method}(*args)
@@ -60,11 +68,19 @@ class Thor
       METHOD
     end
 
+    # Yields the given block with padding.
+    def with_padding
+      shell.padding += 1
+      yield
+    ensure
+      shell.padding -= 1
+    end
+
     protected
 
       # Allow shell to be shared between invocations.
       #
-      def _shared_configuration
+      def _shared_configuration #:nodoc:
         super.merge!(:shell => self.shell)
       end
 

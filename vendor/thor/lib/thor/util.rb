@@ -1,14 +1,14 @@
 require 'rbconfig'
 
 class Thor
-  module Sandbox; end
+  module Sandbox #:nodoc:
+  end
 
   # This module holds several utilities:
   #
   # 1) Methods to convert thor namespaces to constants and vice-versa.
   #
-  #   Thor::Utils.constant_to_namespace(Foo::Bar::Baz) #=> "foo:bar:baz"
-  #   Thor::Utils.namespace_to_constant("foo:bar:baz") #=> Foo::Bar::Baz
+  #   Thor::Utils.namespace_from_thor_class(Foo::Bar::Baz) #=> "foo:bar:baz"
   #
   # 2) Loading thor files and sandboxing:
   #
@@ -22,11 +22,8 @@ class Thor
     # namespace<String>:: The namespace to search for.
     #
     def self.find_by_namespace(namespace)
-      namespace = 'default' if namespace.empty?
-
-      Thor::Base.subclasses.find do |klass|
-        klass.namespace == namespace
-      end
+      namespace = "default#{namespace}" if namespace.empty? || namespace =~ /^:/
+      Thor::Base.subclasses.find { |klass| klass.namespace == namespace }
     end
 
     # Receives a constant and converts it to a Thor namespace. Since Thor tasks
@@ -43,15 +40,14 @@ class Thor
     # ==== Returns
     # String:: If we receive Foo::Bar::Baz it returns "foo:bar:baz"
     #
-    def self.constant_to_namespace(constant, remove_default=true)
+    def self.namespace_from_thor_class(constant)
       constant = constant.to_s.gsub(/^Thor::Sandbox::/, "")
       constant = snake_case(constant).squeeze(":")
-      constant.gsub!(/^default/, '') if remove_default
       constant
     end
 
-    # Given the contents, evaluate it inside the sandbox and returns the thor
-    # classes defined in the sandbox.
+    # Given the contents, evaluate it inside the sandbox and returns the
+    # namespaces defined in the sandbox.
     #
     # ==== Parameters
     # contents<String>
@@ -59,7 +55,7 @@ class Thor
     # ==== Returns
     # Array[Object]
     #
-    def self.namespaces_in_contents(contents, file=__FILE__)
+    def self.namespaces_in_content(contents, file=__FILE__)
       old_constants = Thor::Base.subclasses.dup
       Thor::Base.subclasses.clear
 
@@ -71,6 +67,16 @@ class Thor
       new_constants.map!{ |c| c.namespace }
       new_constants.compact!
       new_constants
+    end
+
+    # Returns the thor classes declared inside the given class.
+    #
+    def self.thor_classes_in(klass)
+      stringfied_constants = klass.constants.map { |c| c.to_s }
+      Thor::Base.subclasses.select do |subclass|
+        next unless subclass.name
+        stringfied_constants.include?(subclass.name.gsub("#{klass.name}::", ''))
+      end
     end
 
     # Receives a string and convert it to snake case. SnakeCase returns snake_case.
@@ -85,6 +91,19 @@ class Thor
       return str.downcase if str =~ /^[A-Z_]+$/
       str.gsub(/\B[A-Z]/, '_\&').squeeze('_') =~ /_*(.*)/
       return $+.downcase
+    end
+
+    # Receives a string and convert it to camel case. camel_case returns CamelCase.
+    #
+    # ==== Parameters
+    # String
+    #
+    # ==== Returns
+    # String
+    #
+    def self.camel_case(str)
+      return str if str !~ /_/ && str =~ /[A-Z]+.*/
+      str.split('_').map { |i| i.capitalize }.join
     end
 
     # Receives a namespace and tries to retrieve a Thor or Thor::Group class
@@ -109,57 +128,38 @@ class Thor
     # ==== Parameters
     # namespace<String>
     #
-    # ==== Errors
-    # Thor::Error:: raised if the namespace cannot be found.
-    #
-    # Thor::Error:: raised if the namespace evals to a class which does not
-    #               inherit from Thor or Thor::Group.
-    #
-    def self.namespace_to_thor_class(namespace, raise_if_nil=true)
-      klass, task_name = Thor::Util.find_by_namespace(namespace), nil
-
-      if klass.nil? && namespace.include?(?:)
-        namespace = namespace.split(":")
-        task_name = namespace.pop
-        klass     = Thor::Util.find_by_namespace(namespace.join(":"))
+    def self.find_class_and_task_by_namespace(namespace, fallback = true)
+      if namespace.include?(?:) # look for a namespaced task
+        pieces = namespace.split(":")
+        task   = pieces.pop
+        klass  = Thor::Util.find_by_namespace(pieces.join(":"))
       end
-
-      raise Error, "could not find Thor class or task '#{namespace}'" if raise_if_nil && klass.nil?
-
-      return klass, task_name
+      unless klass # look for a Thor::Group with the right name
+        klass, task = Thor::Util.find_by_namespace(namespace), nil
+      end
+      if !klass && fallback # try a task in the default namespace
+        task = namespace
+        klass = Thor::Util.find_by_namespace('')
+      end
+      return klass, task
     end
 
     # Receives a path and load the thor file in the path. The file is evaluated
     # inside the sandbox to avoid namespacing conflicts.
     #
-    def self.load_thorfile(path, content=nil)
-      content ||= File.read(path)
+    def self.load_thorfile(path, content=nil, debug=false)
+      content ||= File.binread(path)
 
       begin
         Thor::Sandbox.class_eval(content, path)
       rescue Exception => e
         $stderr.puts "WARNING: unable to load thorfile #{path.inspect}: #{e.message}"
+        if debug
+          $stderr.puts *e.backtrace
+        else
+          $stderr.puts e.backtrace.first
+        end
       end
-    end
-
-    # Receives a yaml (hash) and updates all constants entries to namespace.
-    # This was added to deal with deprecated versions of Thor.
-    #
-    # TODO Deprecate this method in the future.
-    #
-    # ==== Returns
-    # TrueClass|FalseClass:: Returns true if any change to the yaml file was made.
-    #
-    def self.convert_constants_to_namespaces(yaml)
-      yaml_changed = false
-
-      yaml.each do |k, v|
-        next unless v[:constants] && v[:namespaces].nil?
-        yaml_changed = true
-        yaml[k][:namespaces] = v[:constants].map{|c| Thor::Util.constant_to_namespace(c)}
-      end
-
-      yaml_changed
     end
 
     def self.user_home
@@ -187,7 +187,7 @@ class Thor
     # Returns the root where thor files are located, dependending on the OS.
     #
     def self.thor_root
-      File.join(user_home, ".thor")
+      File.join(user_home, ".thor").gsub(/\\/, '/')
     end
 
     # Returns the files in the thor root. On Windows thor_root will be something
@@ -198,7 +198,7 @@ class Thor
     # If we don't #gsub the \ character, Dir.glob will fail.
     #
     def self.thor_root_glob
-      files = Dir["#{thor_root.gsub(/\\/, '/')}/*"]
+      files = Dir["#{thor_root}/*"]
 
       files.map! do |file|
         File.directory?(file) ? File.join(file, "main.thor") : file
@@ -214,10 +214,10 @@ class Thor
     # Return the path to the ruby interpreter taking into account multiple
     # installations and windows extensions.
     #
-    def self.ruby_command #:nodoc:
+    def self.ruby_command
       @ruby_command ||= begin
-        ruby = File.join(Config::CONFIG['bindir'], Config::CONFIG['ruby_install_name'])
-        ruby << Config::CONFIG['EXEEXT']
+        ruby = File.join(RbConfig::CONFIG['bindir'], RbConfig::CONFIG['ruby_install_name'])
+        ruby << RbConfig::CONFIG['EXEEXT']
 
         # escape string in case path to ruby executable contain spaces.
         ruby.sub!(/.*\s.*/m, '"\&"')

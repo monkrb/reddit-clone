@@ -1,19 +1,23 @@
+require 'thor'
+require 'thor/group'
+require 'thor/core_ext/file_binary_read'
+
 require 'fileutils'
 require 'open-uri'
 require 'yaml'
 require 'digest/md5'
 require 'pathname'
 
-class Thor::Runner < Thor
-  map "-T" => :list, "-i" => :install, "-u" => :update
+class Thor::Runner < Thor #:nodoc:
+  map "-T" => :list, "-i" => :install, "-u" => :update, "-v" => :version
 
   # Override Thor#help so it can give information about any class and any method.
   #
-  def help(meth=nil)
+  def help(meth = nil)
     if meth && !self.respond_to?(meth)
       initialize_thorfiles(meth)
-      klass, task = Thor::Util.namespace_to_thor_class(meth)
-      klass.start(["-h", task].compact, :shell => self.shell) # send mapping -h because it works with Thor::Group too
+      klass, task = Thor::Util.find_class_and_task_by_namespace(meth)
+      klass.start(["-h", task].compact, :shell => self.shell)
     else
       super
     end
@@ -25,25 +29,25 @@ class Thor::Runner < Thor
   def method_missing(meth, *args)
     meth = meth.to_s
     initialize_thorfiles(meth)
-    klass, task = Thor::Util.namespace_to_thor_class(meth)
+    klass, task = Thor::Util.find_class_and_task_by_namespace(meth)
     args.unshift(task) if task
-    klass.start(args, :shell => shell)
+    klass.start(args, :shell => self.shell)
   end
 
-  desc "install NAME", "Install a Thor file into your system tasks, optionally named for future updates"
-  method_options :as => :string, :relative => :boolean
+  desc "install NAME", "Install an optionally named Thor file into your system tasks"
+  method_options :as => :string, :relative => :boolean, :force => :boolean
   def install(name)
     initialize_thorfiles
 
-    # If a directory name is provided as the argument, look for a 'main.thor' 
+    # If a directory name is provided as the argument, look for a 'main.thor'
     # task in said directory.
     begin
       if File.directory?(File.expand_path(name))
         base, package = File.join(name, "main.thor"), :directory
-        contents      = open(base).read
+        contents      = open(base) {|input| input.read }
       else
         base, package = name, :file
-        contents      = open(name).read
+        contents      = open(name) {|input| input.read }
       end
     rescue OpenURI::HTTPError
       raise Error, "Error opening URI '#{name}'"
@@ -54,7 +58,9 @@ class Thor::Runner < Thor
     say "Your Thorfile contains:"
     say contents
 
-    return false if no?("Do you wish to continue [y/N]?")
+    unless options["force"]
+      return false if no?("Do you wish to continue [y/N]?")
+    end
 
     as = options["as"] || begin
       first_line = contents.split("\n")[0]
@@ -76,7 +82,7 @@ class Thor::Runner < Thor
     thor_yaml[as] = {
       :filename   => Digest::MD5.hexdigest(name + as),
       :location   => location,
-      :namespaces => Thor::Util.namespaces_in_contents(contents, base)
+      :namespaces => Thor::Util.namespaces_in_content(contents, base)
     }
 
     save_yaml(thor_yaml)
@@ -90,6 +96,12 @@ class Thor::Runner < Thor
     end
 
     thor_yaml[as][:filename] # Indicate success
+  end
+
+  desc "version", "Show Thor version"
+  def version
+    require 'thor/version'
+    say "Thor #{Thor::VERSION}"
   end
 
   desc "uninstall NAME", "Uninstall a named Thor module"
@@ -123,16 +135,11 @@ class Thor::Runner < Thor
   method_options :internal => :boolean
   def installed
     initialize_thorfiles(nil, true)
-
-    klasses = Thor::Base.subclasses
-    klasses -= [Thor, Thor::Runner] unless options["internal"]
-
-    display_klasses(true, klasses)
+    display_klasses(true, options["internal"])
   end
 
-  desc "list [SEARCH]",
-       "List the available thor tasks (--substring means SEARCH anywhere in the namespace)"
-  method_options :substring => :boolean, :group => :string, :all => :boolean
+  desc "list [SEARCH]", "List the available thor tasks (--substring means .*SEARCH)"
+  method_options :substring => :boolean, :group => :string, :all => :boolean, :debug => :boolean
   def list(search="")
     initialize_thorfiles
 
@@ -144,10 +151,14 @@ class Thor::Runner < Thor
       (options[:all] || k.group == group) && k.namespace =~ search
     end
 
-    display_klasses(false, klasses)
+    display_klasses(false, false, klasses)
   end
 
   private
+
+    def self.banner(task, all = false, subcommand = false)
+      "thor " + task.formatted_usage(self, all, subcommand)
+    end
 
     def thor_root
       Thor::Util.thor_root
@@ -156,7 +167,7 @@ class Thor::Runner < Thor
     def thor_yaml
       @thor_yaml ||= begin
         yaml_file = File.join(thor_root, "thor.yml")
-        yaml      = YAML.load_file(yaml_file) if File.exists?(yaml_file)
+        yaml = YAML.load_file(yaml_file) if File.exists?(yaml_file)
         yaml || {}
       end
     end
@@ -175,6 +186,10 @@ class Thor::Runner < Thor
       File.open(yaml_file, "w") { |f| f.puts yaml.to_yaml }
     end
 
+    def self.exit_on_failure?
+      true
+    end
+
     # Load the thorfiles. If relevant_to is supplied, looks for specific files
     # in the thor_root instead of loading them all.
     #
@@ -184,7 +199,7 @@ class Thor::Runner < Thor
     #
     def initialize_thorfiles(relevant_to=nil, skip_lookup=false)
       thorfiles(relevant_to, skip_lookup).each do |f|
-        Thor::Util.load_thorfile(f) unless Thor::Base.subclass_files.keys.include?(File.expand_path(f))
+        Thor::Util.load_thorfile(f, nil, options[:debug]) unless Thor::Base.subclass_files.keys.include?(File.expand_path(f))
       end
     end
 
@@ -211,9 +226,6 @@ class Thor::Runner < Thor
     # 5. c:\ <-- no Thorfiles found!
     #
     def thorfiles(relevant_to=nil, skip_lookup=false)
-      # Deal with deprecated thor when :namespaces: is available as constants
-      save_yaml(thor_yaml) if Thor::Util.convert_constants_to_namespaces(thor_yaml)
-
       thorfiles = []
 
       unless skip_lookup
@@ -249,43 +261,49 @@ class Thor::Runner < Thor
     # Display information about the given klasses. If with_module is given,
     # it shows a table with information extracted from the yaml file.
     #
-    def display_klasses(with_modules=false, klasses=Thor.subclasses)
-      klasses -= [Thor, Thor::Runner] unless with_modules
+    def display_klasses(with_modules=false, show_internal=false, klasses=Thor::Base.subclasses)
+      klasses -= [Thor, Thor::Runner, Thor::Group] unless show_internal
+
       raise Error, "No Thor tasks available" if klasses.empty?
+      show_modules if with_modules && !thor_yaml.empty?
 
-      if with_modules && !thor_yaml.empty?
-        info  = []
-        labels = ["Modules", "Namespaces"]
+      list = Hash.new { |h,k| h[k] = [] }
+      groups = klasses.select { |k| k.ancestors.include?(Thor::Group) }
 
-        info << labels
-        info << [ "-" * labels[0].size, "-" * labels[1].size ]
+      # Get classes which inherit from Thor
+      (klasses - groups).each { |k| list[k.namespace.split(":").first] += k.printable_tasks(false) }
 
-        thor_yaml.each do |name, hash|
-          info << [ name, hash[:namespaces].join(", ") ]
-        end
+      # Get classes which inherit from Thor::Base
+      groups.map! { |k| k.printable_tasks(false).first }
+      list["root"] = groups
 
-        print_table info
-        say ""
-      end
-
-      unless klasses.empty?
-        klasses.each { |k| display_tasks(k) }
-      else
-        say "\033[1;34mNo Thor tasks available\033[0m"
-      end
+      # Order namespaces with default coming first
+      list = list.sort{ |a,b| a[0].sub(/^default/, '') <=> b[0].sub(/^default/, '') }
+      list.each { |n, tasks| display_tasks(n, tasks) unless tasks.empty? }
     end
 
-    # Display tasks from the given Thor class.
-    #
-    def display_tasks(klass)
-      unless klass.tasks.empty?
-        base = klass.namespace
+    def display_tasks(namespace, list) #:nodoc:
+      list.sort!{ |a,b| a[0] <=> b[0] }
 
-        color = base == "default" ? :magenta : :blue
-        say shell.set_color(base, color, true)
-        say "-" * base.length
+      say shell.set_color(namespace, :blue, true)
+      say "-" * namespace.size
 
-        klass.help(shell, :short => true, :namespace => true)
+      print_table(list, :truncate => true)
+      say
+    end
+
+    def show_modules #:nodoc:
+      info  = []
+      labels = ["Modules", "Namespaces"]
+
+      info << labels
+      info << [ "-" * labels[0].size, "-" * labels[1].size ]
+
+      thor_yaml.each do |name, hash|
+        info << [ name, hash[:namespaces].join(", ") ]
       end
+
+      print_table info
+      say ""
     end
 end

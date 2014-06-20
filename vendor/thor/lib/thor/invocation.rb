@@ -5,21 +5,20 @@ class Thor
     end
 
     module ClassMethods
-      # Prepare for class methods invocations. This method must return a klass to
-      # have the invoked class options showed in help messages in generators.
-      #
+      # This method is responsible for receiving a name and find the proper
+      # class and task for it. The key is an optional parameter which is
+      # available only in class methods invocations (i.e. in Thor::Group).
       def prepare_for_invocation(key, name) #:nodoc:
         case name
-          when Symbol, String
-            Thor::Util.namespace_to_thor_class(name.to_s, false)
-          else
-            name
+        when Symbol, String
+          Thor::Util.find_class_and_task_by_namespace(name.to_s, !key)
+        else
+          name
         end
       end
     end
 
-    # Make initializer aware of invocations and the initializer proc.
-    #
+    # Make initializer aware of invocations and the initialization args.
     def initialize(args=[], options={}, config={}, &block) #:nodoc:
       @_invocations = config[:invocations] || Hash.new { |h,k| h[k] = [] }
       @_initializer = [ args, options, config ]
@@ -33,6 +32,8 @@ class Thor
     # You can also supply the arguments, options and configuration values for
     # the task to be invoked, if none is given, the same values used to
     # initialize the invoker are used to initialize the invoked.
+    #
+    # When no name is given, it will invoke the default task of the current class.
     #
     # ==== Examples
     #
@@ -92,81 +93,76 @@ class Thor
     #
     #   invoke Rspec::RR, [], :style => :foo
     #
-    def invoke(name=nil, task=nil, args=nil, opts=nil, config=nil)
-      task, args, opts, config = nil, task, args, opts if task.nil? || task.is_a?(Array)
-      args, opts, config = nil, args, opts if args.is_a?(Hash)
-
-      object, task = _prepare_for_invocation(name, task)
-      if object.is_a?(Class)
-        klass = object
-
-        stored_args, stored_opts, stored_config = @_initializer
-        args ||= stored_args.dup
-        opts ||= stored_opts.dup
-
-        config ||= {}
-        config = stored_config.merge(_shared_configuration).merge!(config)
-        instance = klass.new(args, opts, config)
-      else
-        klass, instance = object.class, object
+    def invoke(name=nil, *args)
+      if name.nil?
+        warn "[Thor] Calling invoke() without argument is deprecated. Please use invoke_all instead.\n#{caller.join("\n")}"
+        return invoke_all
       end
 
-      method_args = []
-      current = @_invocations[klass]
+      args.unshift(nil) if Array === args.first || NilClass === args.first
+      task, args, opts, config = args
 
-      iterator = proc do |_, task|
-        unless current.include?(task.name)
-          current << task.name
-          task.run(instance, method_args)
-        end
-      end
+      klass, task = _retrieve_class_and_task(name, task)
+      raise "Expected Thor class, got #{klass}" unless klass <= Thor::Base
 
-      if task
-        args ||= []
-        method_args = args[Range.new(klass.arguments.size, -1)] || []
-        iterator.call(nil, task)
-      else
-        klass.all_tasks.map(&iterator)
+      args, opts, config = _parse_initialization_options(args, opts, config)
+      klass.send(:dispatch, task, args, opts, config)
+    end
+
+    # Invoke the given task if the given args.
+    def invoke_task(task, *args) #:nodoc:
+      current = @_invocations[self.class]
+
+      unless current.include?(task.name)
+        current << task.name
+        task.run(self, *args)
       end
+    end
+
+    # Invoke all tasks for the current instance.
+    def invoke_all #:nodoc:
+      self.class.all_tasks.map { |_, task| invoke_task(task) }
+    end
+
+    # Invokes using shell padding.
+    def invoke_with_padding(*args)
+      with_padding { invoke(*args) }
     end
 
     protected
 
       # Configuration values that are shared between invocations.
-      #
-      def _shared_configuration
+      def _shared_configuration #:nodoc:
         { :invocations => @_invocations }
       end
 
-      # Prepare for invocation in the instance level. In this case, we have to
-      # take into account that a just a task name from the current class was
-      # given or even a Thor::Task object.
-      #
-      def _prepare_for_invocation(name, sent_task=nil) #:nodoc:
-        if name.is_a?(Thor::Task)
-          task = name
-        elsif task = self.class.all_tasks[name.to_s]
-          object = self
+      # This method simply retrieves the class and task to be invoked.
+      # If the name is nil or the given name is a task in the current class,
+      # use the given name and return self as class. Otherwise, call
+      # prepare_for_invocation in the current class.
+      def _retrieve_class_and_task(name, sent_task=nil) #:nodoc:
+        case
+        when name.nil?
+          [self.class, nil]
+        when self.class.all_tasks[name.to_s]
+          [self.class, name.to_s]
         else
-          object, task = self.class.prepare_for_invocation(nil, name)
-          task ||= sent_task
+          klass, task = self.class.prepare_for_invocation(nil, name)
+          [klass, task || sent_task]
         end
-
-        # If the object was not set, use self and use the name as task.
-        object, task = self, name unless object
-        return object, _validate_klass_and_task(object, task)
       end
 
-      # Check if the object given is a Thor class object and get a task object
-      # for it.
-      #
-      def _validate_klass_and_task(object, task) #:nodoc:
-        klass = object.is_a?(Class) ? object : object.class
-        raise "Expected Thor class, got #{klass}" unless klass <= Thor::Base
+      # Initialize klass using values stored in the @_initializer.
+      def _parse_initialization_options(args, opts, config) #:nodoc:
+        stored_args, stored_opts, stored_config = @_initializer
 
-        task ||= klass.default_task if klass <= Thor
-        task = klass.all_tasks[task.to_s] || Task.dynamic(task) if task && !task.is_a?(Thor::Task)
-        task
+        args ||= stored_args.dup
+        opts ||= stored_opts.dup
+
+        config ||= {}
+        config = stored_config.merge(_shared_configuration).merge!(config)
+
+        [ args, opts, config ]
       end
   end
 end

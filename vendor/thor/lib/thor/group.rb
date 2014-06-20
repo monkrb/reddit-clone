@@ -1,11 +1,12 @@
+require 'thor/base'
+
 # Thor has a special class called Thor::Group. The main difference to Thor class
 # is that it invokes all tasks at once. It also include some methods that allows
 # invocations to be done at the class method, which are not available to Thor
 # tasks.
-#
 class Thor::Group
   class << self
-    # The descrition for this Thor::Group. If none is provided, but a source root
+    # The description for this Thor::Group. If none is provided, but a source root
     # exists, tries to find the USAGE one folder above it, otherwise searches
     # in the superclass.
     #
@@ -21,36 +22,17 @@ class Thor::Group
       end
     end
 
-    # Start works differently in Thor::Group, it simply invokes all tasks
-    # inside the class.
-    #
-    def start(given_args=ARGV, config={})
-      super do
-        if Thor::HELP_MAPPINGS.include?(given_args.first)
-          help(config[:shell])
-          return
-        end
-
-        args, opts = Thor::Options.split(given_args)
-        new(args, opts, config).invoke
-      end
-    end
-
     # Prints help information.
     #
     # ==== Options
     # short:: When true, shows only usage.
     #
-    def help(shell, options={})
-      if options[:short]
-        shell.say banner
-      else
-        shell.say "Usage:"
-        shell.say "  #{banner}"
-        shell.say
-        class_options_help(shell)
-        shell.say self.desc if self.desc
-      end
+    def help(shell)
+      shell.say "Usage:"
+      shell.say "  #{banner}\n"
+      shell.say
+      class_options_help(shell)
+      shell.say self.desc if self.desc
     end
 
     # Stores invocations for this class merging with superclass values.
@@ -74,7 +56,7 @@ class Thor::Group
     #
     def invoke(*names, &block)
       options = names.last.is_a?(Hash) ? names.pop : {}
-      verbose = options.fetch(:verbose, :white)
+      verbose = options.fetch(:verbose, true)
 
       names.each do |name|
         invocations[name] = false
@@ -132,7 +114,7 @@ class Thor::Group
 
       names.each do |name|
         unless class_options.key?(name)
-          raise ArgumentError, "You have to define the option #{name.inspect} " << 
+          raise ArgumentError, "You have to define the option #{name.inspect} " <<
                                "before setting invoke_from_option."
         end
 
@@ -177,15 +159,11 @@ class Thor::Group
     # Overwrite class options help to allow invoked generators options to be
     # shown recursively when invoking a generator.
     #
-    def class_options_help(shell, ungrouped_name=nil, extra_group=nil) #:nodoc:
-      group_options = {}
-
-      get_options_from_invocations(group_options, class_options) do |klass|
-        klass.send(:get_options_from_invocations, group_options, class_options)
+    def class_options_help(shell, groups={}) #:nodoc:
+      get_options_from_invocations(groups, class_options) do |klass|
+        klass.send(:get_options_from_invocations, groups, class_options)
       end
-
-      group_options.merge!(extra_group) if extra_group
-      super(shell, ungrouped_name, group_options)
+      super(shell, groups)
     end
 
     # Get invocations array and merge options from invocations. Those
@@ -218,13 +196,46 @@ class Thor::Group
       end
     end
 
+    # Returns tasks ready to be printed.
+    def printable_tasks(*)
+      item = []
+      item << banner
+      item << (desc ? "# #{desc.gsub(/\s+/m,' ')}" : "")
+      [item]
+    end
+
+    def handle_argument_error(task, error) #:nodoc:
+      raise error, "#{task.name.inspect} was called incorrectly. Are you sure it has arity equals to 0?"
+    end
+
     protected
 
+      # The method responsible for dispatching given the args.
+      def dispatch(task, given_args, given_opts, config) #:nodoc:
+        if Thor::HELP_MAPPINGS.include?(given_args.first)
+          help(config[:shell])
+          return
+        end
+
+        args, opts = Thor::Options.split(given_args)
+        opts = given_opts || opts
+
+        if task
+          new(args, opts, config).invoke_task(all_tasks[task])
+        else
+          new(args, opts, config).invoke_all
+        end
+      end
+
       # The banner for this class. You can customize it if you are invoking the
-      # thor class by another means which is not the Thor::Runner.
-      #
-      def banner #:nodoc:
-        "#{self.namespace} #{self.arguments.map {|a| a.usage }.join(' ')}"
+      # thor class by another ways which is not the Thor::Runner.
+      def banner
+        "#{$0} #{self_task.formatted_usage(self, false)}"
+      end
+
+      # Represents the whole class as a task.
+      def self_task #:nodoc:
+        Thor::DynamicTask.new(self.namespace, class_options)
       end
 
       def baseclass #:nodoc:
@@ -232,7 +243,7 @@ class Thor::Group
       end
 
       def create_task(meth) #:nodoc:
-        tasks[meth.to_s] = Thor::Task.new(meth, nil, nil, nil)
+        tasks[meth.to_s] = Thor::Task.new(meth, nil, nil, nil, nil)
         true
       end
   end
@@ -241,23 +252,22 @@ class Thor::Group
 
   protected
 
-    # Shortcut to invoke with padding and block handling. Use internally by
-    # invoke and invoke_from_option class methods.
-    #
-    def _invoke_for_class_method(klass, task=nil, *args, &block)
-      shell.padding += 1
-
-      result = if block_given?
-        if block.arity == 2
-          block.call(self, klass)
-        else
+  # Shortcut to invoke with padding and block handling. Use internally by
+  # invoke and invoke_from_option class methods.
+  def _invoke_for_class_method(klass, task=nil, *args, &block) #:nodoc:
+    with_padding do
+      if block
+        case block.arity
+        when 3
           block.call(self, klass, task)
+        when 2
+          block.call(self, klass)
+        when 1
+          instance_exec(klass, &block)
         end
       else
         invoke klass, task, *args
       end
-
-      shell.padding -= 1
-      result
     end
+  end
 end
